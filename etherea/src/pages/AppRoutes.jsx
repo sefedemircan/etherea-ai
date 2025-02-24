@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import PrivateRoute from '../components/PrivateRoute';
 import Home from './Home';
 import JournalEntry from './JournalEntry';
+import JournalList from './JournalList';
 import Analysis from './Analysis';
 import Recommendations from './Recommendations';
 import SignIn from './auth/SignIn';
@@ -20,6 +21,7 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/entry" element={<JournalEntry />} />
         <Route path="/entry/:date" element={<JournalEntry />} />
+        <Route path="/journals" element={<JournalList />} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/recommendations" element={<Recommendations />} />
       </Route>

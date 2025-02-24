@@ -157,6 +157,8 @@ function JournalEntry() {
             onClick={handleSubmit}
             loading={isSaving}
             disabled={!content.trim()}
+            bg="etherea.3"
+            c="etherea.5"
           >
             Kaydet
           </Button>
@@ -165,15 +167,15 @@ function JournalEntry() {
 
       {analysis && (
         <Paper shadow="sm" p="md" radius="md">
-          <Title order={4} mb="md">AI Analizi</Title>
+          <Title c="etherea.6" order={4} mb="md">AI Analizi</Title>
           <Stack spacing="md">
             <Group>
-              <Text fw={500}>Duygu Durumu:</Text>
-              <Text>{['Çok Kötü', 'Kötü', 'Normal', 'İyi', 'Çok İyi'][analysis.mood - 1]}</Text>
+              <Text fw={500} c="etherea.5">Duygu Durumu:</Text>
+              <Text c="#5E4B8B">{['Çok Kötü', 'Kötü', 'Normal', 'İyi', 'Çok İyi'][analysis.mood - 1]}</Text>
             </Group>
             
             <div>
-              <Text fw={500} mb="xs">Anahtar Kelimeler:</Text>
+              <Text fw={500} c="etherea.5" mb="xs">Anahtar Kelimeler:</Text>
               <Group gap="xs">
                 {analysis.keywords.map((keyword, index) => (
                   <Text
@@ -182,6 +184,7 @@ function JournalEntry() {
                     px="xs"
                     py={4}
                     bg="etherea.1"
+                    c="etherea.5"
                     style={{ borderRadius: '4px' }}
                   >
                     {keyword}
@@ -191,14 +194,14 @@ function JournalEntry() {
             </div>
 
             <div>
-              <Text fw={500} mb="xs">Özet:</Text>
-              <Text size="sm">{analysis.summary}</Text>
+              <Text fw={500} c="etherea.5" mb="xs">Özet:</Text>
+              <Text size="sm" c="etherea.6">{analysis.summary}</Text>
             </div>
 
             <div>
-              <Text fw={500} mb="xs">Öneriler:</Text>
+              <Text fw={500} c="etherea.5" mb="xs">Öneriler:</Text>
               {analysis.suggestions.map((suggestion, index) => (
-                <Text key={index} size="sm" mb="xs">
+                <Text key={index} size="sm" c="etherea.6" mb="xs">
                   • {suggestion}
                 </Text>
               ))}

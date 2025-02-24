@@ -49,7 +49,11 @@ const theme = createTheme({
   },
   primaryColor: 'etherea',
   primaryShade: 4,
-  fontFamily: 'Inter, sans-serif',
+  fontFamily: 'Poppins, sans-serif',
+  headings: {
+    fontFamily: 'Poppins, sans-serif',
+    fontWeight: 600,
+  },
   defaultRadius: 'md',
   white: '#F9F6FF',
   black: '#5E4B8B',
@@ -71,6 +75,7 @@ const theme = createTheme({
       styles: {
         root: {
           color: '#9A7BFF',
+          fontWeight: 500,
           '&:hover': {
             backgroundColor: '#FFD8BE',
           },
@@ -93,6 +98,14 @@ const theme = createTheme({
       styles: {
         root: {
           color: '#5E4B8B',
+          fontWeight: 600,
+        },
+      },
+    },
+    Text: {
+      styles: {
+        root: {
+          fontWeight: 400,
         },
       },
     },
@@ -105,6 +118,7 @@ const theme = createTheme({
           backgroundColor: '#F9F6FF',
           color: '#5E4B8B',
           border: '1px solid #E2D8FF',
+          fontFamily: 'Poppins, sans-serif',
           '&:focus': {
             borderColor: '#9A7BFF',
           },
@@ -123,6 +137,7 @@ const theme = createTheme({
           backgroundColor: '#F9F6FF',
           color: '#5E4B8B',
           border: '1px solid #E2D8FF',
+          fontFamily: 'Poppins, sans-serif',
           '&:focus': {
             borderColor: '#9A7BFF',
           },
@@ -139,10 +154,11 @@ const theme = createTheme({
       styles: {
         root: {
           backgroundColor: '#F9F6FF',
+          fontWeight: 500,
           '&:hover': {
             backgroundColor: '#F0EBFF',
           },
-          '&[data-active]': {
+          '&[dataActive]': {
             backgroundColor: '#E2D8FF !important',
           },
         },
@@ -153,31 +169,34 @@ const theme = createTheme({
         day: {
           backgroundColor: '#F9F6FF',
           color: '#5E4B8B',
+          fontFamily: 'Poppins, sans-serif',
           '&:hover': {
             backgroundColor: '#F0EBFF',
           },
-          '&[data-selected]': {
+          '&[dataSelected]': {
             backgroundColor: '#9A7BFF',
             color: '#F9F6FF',
             '&:hover': {
               backgroundColor: '#7D5EFF',
             },
           },
-          '&[data-weekend]': {
+          '&[dataWeekend]': {
             color: '#9A7BFF',
           },
-          '&[data-outside]': {
+          '&[dataOutside]': {
             color: '#C5B3FF',
           },
         },
         monthCell: {
           backgroundColor: '#F9F6FF',
+          fontFamily: 'Poppins, sans-serif',
           '&:hover': {
             backgroundColor: '#F0EBFF',
           },
         },
         yearCell: {
           backgroundColor: '#F9F6FF',
+          fontFamily: 'Poppins, sans-serif',
           '&:hover': {
             backgroundColor: '#F0EBFF',
           },

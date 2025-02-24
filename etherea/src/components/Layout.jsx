@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
-import { AppShell, Burger, Group, NavLink, Title, Box, Button } from '@mantine/core';
+import { AppShell, Burger, Group, NavLink, Title, Box, Button, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconHome, IconPencil, IconChartLine, IconBulb, IconLogout } from '@tabler/icons-react';
+import { IconHome, IconPencil, IconChartLine, IconBulb, IconLogout, IconNotebook } from '@tabler/icons-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { notifications } from '@mantine/notifications';
@@ -15,6 +15,7 @@ function Layout() {
   const navItems = [
     { icon: IconHome, label: 'Ana Sayfa', path: '/' },
     { icon: IconPencil, label: 'Günlük Yaz', path: '/entry' },
+    { icon: IconNotebook, label: 'Günlüklerim', path: '/journals' },
     { icon: IconChartLine, label: 'Analizler', path: '/analysis' },
     { icon: IconBulb, label: 'Öneriler', path: '/recommendations' },
   ];
@@ -70,7 +71,7 @@ function Layout() {
           <Group h="100%" px="md" justify="space-between">
             <Group>
               <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" color="#5E4B8B" />
-              <Title order={3} c="#5E4B8B">Etherea AI Günlük</Title>
+              <Title order={3} c="etherea.5">etherea.<span style={{color: '#9A7BFF'}}>ai</span></Title>
             </Group>
             <Button
               variant="subtle"
@@ -98,7 +99,7 @@ function Layout() {
                   color: '#5E4B8B',
                   fontWeight: 500,
                   backgroundColor: '#F9F6FF',
-                  '&[data-active]': {
+                  '&[dataActive]': {
                     backgroundColor: '#E2D8FF',
                     color: '#9A7BFF',
                   },
