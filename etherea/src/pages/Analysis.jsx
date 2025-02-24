@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Paper, Stack, Title, Grid, Text, LoadingOverlay, Skeleton } from '@mantine/core';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Paper, Stack, Title, Grid, Text, LoadingOverlay, Skeleton, Badge, Tooltip, Group } from '@mantine/core';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import { analyticsApi, journalApi } from '../services/supabase';
 import { aiApi } from '../services/openai';
 import { notifications } from '@mantine/notifications';
@@ -130,37 +130,94 @@ function Analysis() {
     </Paper>
   );
 
-  const renderKeywords = () => (
-    <Paper shadow="sm" p="md" radius="md" pos="relative">
-      <LoadingOverlay visible={loadingStates.keywords} overlayProps={{ blur: 2 }} />
-      <Title order={4} mb="md">Anahtar Kelimeler</Title>
-      {!loadingStates.keywords && keywords.length > 0 ? (
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: '10px', 
-          justifyContent: 'center',
-          minHeight: '200px',
-          alignItems: 'center' 
-        }}>
-          {keywords.map((keyword, index) => (
-            <Text
-              key={index}
-              size={keyword.size}
-              style={{ cursor: 'pointer' }}
-              c={index % 2 === 0 ? '#9A7BFF' : '#5E4B8B'}
-            >
-              {keyword.text}
+  const renderKeywords = () => {
+    const getKeywordColor = (frequency) => {
+      // En yüksek frekansa göre renk belirleme
+      const maxSize = Math.max(...keywords.map(k => k.size));
+      const ratio = (frequency - 15) / (maxSize - 15); // 15 minimum boyut
+      
+      if (ratio > 0.8) return 'etherea.6';      // En sık
+      if (ratio > 0.6) return 'etherea.5';      // Çok sık
+      if (ratio > 0.4) return 'etherea.4';      // Orta sık
+      if (ratio > 0.2) return 'etherea.3';      // Az sık
+      return 'etherea.2';                       // En az sık
+    };
+
+    const getKeywordSize = (size) => {
+      // Badge boyutunu belirle
+      if (size > 35) return 'xl';
+      if (size > 30) return 'lg';
+      if (size > 25) return 'md';
+      if (size > 20) return 'sm';
+      return 'xs';
+    };
+
+    return (
+      <Paper shadow="sm" p="md" radius="md" pos="relative">
+        <LoadingOverlay visible={loadingStates.keywords} overlayProps={{ blur: 2 }} />
+        <Title order={4} mb="md">Anahtar Kelimeler</Title>
+        {!loadingStates.keywords && keywords.length > 0 ? (
+          <Stack spacing="lg">
+            <Text size="sm" c="dimmed" ta="center">
+              Son 30 günde en sık kullandığınız kelimeler ve duygular
             </Text>
-          ))}
-        </div>
-      ) : (
-        <Text c="dimmed" ta="center" py="xl">
-          Henüz anahtar kelime bulunmuyor
-        </Text>
-      )}
-    </Paper>
-  );
+            <div style={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: '12px', 
+              justifyContent: 'center',
+              padding: '20px',
+              minHeight: '200px',
+              alignItems: 'center',
+              background: '#F0EBFF',
+              borderRadius: '8px'
+            }}>
+              {keywords.map((keyword, index) => (
+                <Tooltip
+                  key={index}
+                  label={`${keyword.text} (${Math.round((keyword.size - 15) * 4)}% sıklıkta)`}
+                  position="top"
+                  withArrow
+                >
+                  <Badge
+                    size={getKeywordSize(keyword.size)}
+                    radius="md"
+                    variant="light"
+                    color={getKeywordColor(keyword.size)}
+                    style={{
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                  >
+                    {keyword.text}
+                  </Badge>
+                </Tooltip>
+              ))}
+            </div>
+            <Group justify="center" gap="lg">
+              <Badge size="xs" variant="light" color="etherea.2">En az kullanılan</Badge>
+              <Badge size="sm" variant="light" color="etherea.3">Az kullanılan</Badge>
+              <Badge variant="light" color="etherea.4">Orta sıklıkta</Badge>
+              <Badge size="lg" variant="light" color="etherea.5">Sık kullanılan</Badge>
+              <Badge size="xl" variant="light" color="etherea.6">En sık kullanılan</Badge>
+            </Group>
+          </Stack>
+        ) : (
+          <Stack align="center" spacing="md" py="xl">
+            <Text c="dimmed" ta="center">
+              Henüz anahtar kelime bulunmuyor
+            </Text>
+            <Text size="sm" c="dimmed" ta="center">
+              Günlük girdileri oluşturdukça, en sık kullandığınız kelimeler burada görünecek
+            </Text>
+          </Stack>
+        )}
+      </Paper>
+    );
+  };
 
   const renderSummary = () => (
     <Paper shadow="sm" p="md" radius="md" pos="relative">
