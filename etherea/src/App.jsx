@@ -230,7 +230,7 @@ const theme = createTheme({
 
 function App() {
   return (
-    <MantineProvider theme={theme}>
+    <MantineProvider theme={theme} colorScheme="light">
       <Notifications />
       <Router>
         <AuthProvider>

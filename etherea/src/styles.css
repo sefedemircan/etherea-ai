@@ -11,14 +11,43 @@ body {
 }
 
 /* Mantine Calendar özelleştirmeleri */
-.mantine-Calendar-day[data-weekend] {
-  color: #9A7BFF;
-}
-
-.mantine-Calendar-day[data-selected] {
-  background-color: #9A7BFF;
+.mantine-Calendar-day {
+  background-color: #F9F6FF !important;
+  color: #5E4B8B !important;
 }
 
 .mantine-Calendar-day:hover {
-  background-color: #E2D8FF;
+  background-color: #E2D8FF !important;
+}
+
+.mantine-Calendar-day[data-selected] {
+  background-color: #9A7BFF !important;
+  color: #F9F6FF !important;
+}
+
+.mantine-Calendar-day[data-selected]:hover {
+  background-color: #7D5EFF !important;
+}
+
+.mantine-Calendar-day[data-weekend] {
+  color: #9A7BFF !important;
+}
+
+.mantine-Calendar-day[data-outside] {
+  color: #C5B3FF !important;
+}
+
+.mantine-Calendar-monthPickerControl:hover,
+.mantine-Calendar-yearPickerControl:hover,
+.mantine-Calendar-calendarHeaderControl:hover,
+.mantine-Calendar-calendarHeaderLevel:hover {
+  background-color: #E2D8FF !important;
+}
+
+.mantine-Calendar-monthPickerControl,
+.mantine-Calendar-yearPickerControl,
+.mantine-Calendar-calendarHeaderControl,
+.mantine-Calendar-calendarHeaderLevel,
+.mantine-Calendar-weekday {
+  color: #5E4B8B !important;
 } 
