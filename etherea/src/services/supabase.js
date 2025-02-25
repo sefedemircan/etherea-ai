@@ -94,11 +94,31 @@ export const journalApi = {
   async getEntryByDate(date) {
     const { data: { user } } = await supabase.auth.getUser();
     
+    // Tarih formatını sıkı bir şekilde kontrol ediyoruz
+    let formattedDate;
+    try {
+      // Önce geçerli bir tarih olduğundan emin oluyoruz
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error('Geçersiz tarih formatı');
+      }
+      
+      // UTC'ye çevirip YYYY-MM-DD formatına getiriyoruz
+      formattedDate = new Date(Date.UTC(
+        parsedDate.getFullYear(),
+        parsedDate.getMonth(),
+        parsedDate.getDate()
+      )).toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Tarih formatı hatası:', error);
+      throw new Error('Geçersiz tarih formatı');
+    }
+    
     const { data, error } = await supabase
       .from('journal_entries')
       .select('*')
       .eq('user_id', user.id)
-      .eq('date', date)
+      .eq('date', formattedDate)
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;

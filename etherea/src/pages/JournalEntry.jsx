@@ -23,7 +23,18 @@ function JournalEntry() {
 
   const loadExistingEntry = async () => {
     try {
-      const entry = await journalApi.getEntryByDate(date);
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error('Geçersiz tarih formatı');
+      }
+      
+      const formattedDate = new Date(Date.UTC(
+        parsedDate.getFullYear(),
+        parsedDate.getMonth(),
+        parsedDate.getDate()
+      )).toISOString().split('T')[0];
+
+      const entry = await journalApi.getEntryByDate(formattedDate);
       if (entry) {
         setExistingEntry(entry);
         setContent(entry.content);
@@ -38,6 +49,11 @@ function JournalEntry() {
       }
     } catch (error) {
       console.error('Günlük yüklenirken hata:', error);
+      notifications.show({
+        title: 'Hata',
+        message: 'Günlük yüklenirken bir hata oluştu',
+        color: 'red',
+      });
     }
   };
 
@@ -83,9 +99,10 @@ function JournalEntry() {
 
     setIsSaving(true);
     try {
+      const currentDate = date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       const entryData = {
         content,
-        date: date || new Date().toISOString().split('T')[0],
+        date: currentDate,
         mood: analysis?.mood || 3,
         keywords: analysis?.keywords || [],
         ai_summary: analysis?.summary || null,

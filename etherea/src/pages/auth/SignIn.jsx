@@ -21,7 +21,8 @@ export default function SignIn() {
       notifications.show({
         title: 'Başarılı',
         message: 'Hoş geldiniz!',
-        color: 'green',
+        color: 'etherea.4',
+        bg: 'etherea.5',
       });
       navigate('/');
     } catch (error) {
