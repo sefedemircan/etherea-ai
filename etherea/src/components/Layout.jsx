@@ -26,8 +26,8 @@ function Layout() {
       notifications.show({
         title: 'Başarılı',
         message: 'Çıkış yapıldı',
-        color: 'etherea.4',
-        bg: 'etherea.5',
+        color: 'white',
+        bg: 'etherea.7',
       });
       navigate('/auth/signin');
     } catch (error) {

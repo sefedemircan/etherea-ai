@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Paper, Stack, Title, Textarea, Button, Group, Text, LoadingOverlay } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconSend, IconBrain } from '@tabler/icons-react';
-import { journalApi } from '../services/supabase';
+import { journalApi, recommendationsApi } from '../services/supabase';
 import { aiApi } from '../services/openai';
 
 function JournalEntry() {
@@ -109,19 +109,38 @@ function JournalEntry() {
         ai_suggestions: analysis?.suggestions || []
       };
 
+      let savedEntry;
       if (existingEntry) {
-        await journalApi.updateEntry(existingEntry.id, entryData);
+        savedEntry = await journalApi.updateEntry(existingEntry.id, entryData);
       } else {
-        await journalApi.createEntry(entryData);
+        savedEntry = await journalApi.createEntry(entryData);
       }
 
-      notifications.show({
-        title: 'Başarılı',
-        message: 'Günlük kaydedildi',
-        color: 'green',
-      });
+      // Eski önerileri temizle
+      await recommendationsApi.deleteOldRecommendations();
 
-      navigate('/');
+      // Yeni öneriler oluştur
+      try {
+        await recommendationsApi.createRecommendations(
+          savedEntry.mood,
+          savedEntry.keywords || []
+        );
+
+        notifications.show({
+          title: 'Başarılı',
+          message: 'Günlük kaydedildi ve öneriler oluşturuldu',
+          color: 'green',
+        });
+      } catch (error) {
+        console.error('Öneriler oluşturulurken hata:', error);
+        notifications.show({
+          title: 'Uyarı',
+          message: 'Günlük kaydedildi fakat öneriler oluşturulamadı',
+          color: 'yellow',
+        });
+      }
+
+      navigate('/recommendations');
     } catch (error) {
       notifications.show({
         title: 'Hata',

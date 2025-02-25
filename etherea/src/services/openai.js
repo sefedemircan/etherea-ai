@@ -99,28 +99,39 @@ export const aiApi = {
         messages: [
           {
             role: 'system',
-            content: `Kullanıcının duygu durumu (${mood}/5) ve anahtar kelimeleri (${keywords.join(', ')}) 
-            baz alarak kişiselleştirilmiş öneriler sun. Yanıtını JSON formatında ver:
+            content: `Sen bir terapist ve kişisel gelişim uzmanısın. 
+            Kullanıcının duygu durumu (${mood}/5) ve anahtar kelimeleri (${keywords.join(', ')}) 
+            baz alarak kişiselleştirilmiş öneriler sun. Her öneri türü için 3 adet öneri yap.
+            
+            Öneriler şu kriterlere göre seçilmeli:
+            - Müzik: Duygu durumuna uygun, rahatlatıcı veya motive edici şarkılar/playlistler
+            - Meditasyon: Duygu durumunu dengeleyici veya iyileştirici meditasyon/nefes egzersizleri
+            - Okuma: Kişisel gelişim, psikoloji veya motivasyon içerikli kitaplar/makaleler
+            
+            Yanıtını JSON formatında ver:
             {
               "music": [
                 {
                   "title": "Şarkı/Playlist adı",
-                  "description": "Neden bu öneriyi yaptığına dair açıklama",
-                  "link": "spotify_url"
+                  "description": "Neden bu öneriyi yaptığına dair detaylı açıklama",
+                  "link": "spotify_url",
+                  "image_url": "kapak_görseli_url"
                 }
               ],
               "meditation": [
                 {
-                  "title": "Meditasyon adı",
-                  "description": "Neden bu öneriyi yaptığına dair açıklama",
-                  "link": "youtube_url"
+                  "title": "Meditasyon/Video adı",
+                  "description": "Neden bu öneriyi yaptığına dair detaylı açıklama",
+                  "link": "youtube_url",
+                  "image_url": "thumbnail_url"
                 }
               ],
               "reading": [
                 {
-                  "title": "Kitap adı",
-                  "description": "Neden bu öneriyi yaptığına dair açıklama",
-                  "link": "goodreads_url"
+                  "title": "Kitap/Makale adı",
+                  "description": "Neden bu öneriyi yaptığına dair detaylı açıklama",
+                  "link": "goodreads_url/blog_url",
+                  "image_url": "kitap_kapağı_url"
                 }
               ]
             }`

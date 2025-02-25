@@ -97,7 +97,7 @@ function Recommendations() {
   const loadRecommendations = async () => {
     setIsLoading(true);
     try {
-      const data = await recommendationsApi.getRecommendations();
+      const data = await recommendationsApi.getLatestRecommendations();
       const grouped = data.reduce((acc, item) => {
         acc[item.type].push(item);
         return acc;
