@@ -151,9 +151,9 @@ function Home() {
             <Group position="apart" mb="md">
               <Title order={4}>Takvim</Title>
               <Group spacing="xs">
-                <Badge color="etherea.4" variant="dot">Pozitif</Badge>
-                <Badge color="serenity.3" variant="dot">Nötr</Badge>
-                <Badge color="warmth.3" variant="dot">Negatif</Badge>
+                <Badge style={{border: 'transparent'}} bg="etherea.4" color="etherea.6" variant="dot">Pozitif</Badge>
+                <Badge style={{border: 'transparent'}} bg="serenity.4" color="serenity.6" variant="dot">Nötr</Badge>
+                <Badge style={{border: 'transparent'}} bg="warmth.6" color="warmth.3" variant="dot">Negatif</Badge>
               </Group>
             </Group>
             <Calendar
@@ -179,9 +179,9 @@ function Home() {
                 size={150}
                 thickness={12}
                 sections={[
-                  { value: moodStats.positive, color: '#9A7BFF' },
-                  { value: moodStats.neutral, color: '#B5E6F6' },
-                  { value: moodStats.negative, color: '#FFD8BE' },
+                  { value: moodStats.positive, color: 'etherea.4' },
+                  { value: moodStats.neutral, color: 'serenity.4' },
+                  { value: moodStats.negative, color: 'warmth.6' },
                 ]}
                 label={
                   <Text ta="center" size="sm" c="etherea.6">
