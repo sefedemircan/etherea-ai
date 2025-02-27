@@ -4,7 +4,7 @@ import { IconMusic, IconVideo, IconBook } from '@tabler/icons-react';
 import { recommendationsApi } from '../services/supabase';
 import { notifications } from '@mantine/notifications';
 
-function RecommendationCard({ item, onView }) {
+function RecommendationCard({ item, onView, fixedImage }) {
   const [isViewing, setIsViewing] = useState(false);
 
   const handleView = async () => {
@@ -27,14 +27,14 @@ function RecommendationCard({ item, onView }) {
     <Card shadow="sm" padding="lg" radius="md" withBorder>
       <Card.Section>
         <Image
-          src={item.image_url || `https://picsum.photos/seed/${item.id}/400/200`}
+          src={ fixedImage || item.image_url || `https://picsum.photos/seed/${item.id}/400/200` }
           height={160}
           alt={item.title}
         />
       </Card.Section>
 
       <Stack mt="md" spacing="sm">
-        <Text fw={500}>{item.title}</Text>
+        <Text fw={500} c="#9A7BFF">{item.title}</Text>
         <Text size="sm" c="dimmed">
           {item.description}
         </Text>
@@ -62,7 +62,7 @@ function RecommendationCard({ item, onView }) {
   );
 }
 
-function RecommendationSection({ title, icon: Icon, items, onView }) {
+function RecommendationSection({ title, icon: Icon, items, onView, fixedImage }) {
   if (items.length === 0) return null;
 
   return (
@@ -74,9 +74,10 @@ function RecommendationSection({ title, icon: Icon, items, onView }) {
       <Grid>
         {items.map((item) => (
           <Grid.Col key={item.id} span={{ base: 12, sm: 6 }}>
-            <RecommendationCard item={item} onView={onView} />
+            <RecommendationCard item={item} onView={onView} fixedImage={fixedImage} />
           </Grid.Col>
-        ))}
+        ))
+        }
       </Grid>
     </Paper>
   );
@@ -144,18 +145,21 @@ function Recommendations() {
         <>
           <RecommendationSection
             title="Müzik Önerileri"
+            fixedImage="https://images.unsplash.com/photo-1510915361894-db8b60106cb1?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             icon={IconMusic}
             items={recommendations.music}
             onView={handleView}
           />
           <RecommendationSection
             title="Meditasyon Önerileri"
+            fixedImage="https://images.unsplash.com/photo-1536623975707-c4b3b2af565d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             icon={IconVideo}
             items={recommendations.meditation}
             onView={handleView}
           />
           <RecommendationSection
             title="Okuma Önerileri"
+            fixedImage="https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             icon={IconBook}
             items={recommendations.reading}
             onView={handleView}
