@@ -253,7 +253,7 @@ function Profile() {
             <Stack spacing="xl">
               <Paper shadow="xs" p="md" radius="md">
                 <Title order={4} mb="md">Hakkında</Title>
-                <Text>{profile.about}</Text>
+                <Text c="dimmed">{profile.about}</Text>
               </Paper>
 
               <Paper shadow="xs" p="md" radius="md">
@@ -271,7 +271,7 @@ function Profile() {
                 <Title order={4} mb="md">Eğitim</Title>
                 <Stack spacing="xs">
                   {profile.education.map((edu, index) => (
-                    <Text key={index}>{edu}</Text>
+                    <Text c="dimmed" key={index}>{edu}</Text>
                   ))}
                 </Stack>
               </Paper>
@@ -281,7 +281,7 @@ function Profile() {
                   <Title order={4} mb="md">Sertifikalar</Title>
                   <Stack spacing="xs">
                     {profile.certifications.map((cert, index) => (
-                      <Text key={index}>{cert}</Text>
+                      <Text c="dimmed" key={index}>{cert}</Text>
                     ))}
                   </Stack>
                 </Paper>
@@ -295,15 +295,15 @@ function Profile() {
                 <Title order={4} mb="md">Detaylar</Title>
                 <Stack spacing="md">
                   <div>
-                    <Text size="sm" c="dimmed">Deneyim</Text>
-                    <Text>{profile.experience_years} Yıl</Text>
+                    <Text size="sm" fw={500} c="dimmed">Deneyim</Text>
+                    <Text fw={700} c="dimmed">{profile.experience_years} Yıl</Text>
                   </div>
                   <div>
-                    <Text size="sm" c="dimmed">Seans Ücreti</Text>
-                    <Text>{profile.session_fee} TL</Text>
+                    <Text fw={500} size="sm" c="dimmed">Seans Ücreti</Text>
+                    <Text fw={700} c="dimmed">{profile.session_fee} TL</Text>
                   </div>
                   <div>
-                    <Text size="sm" c="dimmed">Konuşulan Diller</Text>
+                    <Text fw={500} size="sm" c="dimmed">Konuşulan Diller</Text>
                     <Group>
                       {profile.languages.map((lang, index) => (
                         <Badge key={index} variant="dot" color="etherea.4">
@@ -313,7 +313,7 @@ function Profile() {
                     </Group>
                   </div>
                   <div>
-                    <Text size="sm" c="dimmed">Görüşme Tipleri</Text>
+                    <Text fw={500} size="sm" c="dimmed">Görüşme Tipleri</Text>
                     <Group>
                       {profile.session_types.map((type, index) => (
                         <Badge key={index} variant="dot" color="etherea.4">
@@ -330,7 +330,7 @@ function Profile() {
                 <Stack spacing="md">
                   <div>
                     <Group position="apart" mb="xs">
-                      <Text size="sm">Diploma</Text>
+                      <Text c="dimmed" size="sm">Diploma</Text>
                       <Button
                         component="label"
                         size="xs"
@@ -358,7 +358,7 @@ function Profile() {
 
                   <div>
                     <Group position="apart" mb="xs">
-                      <Text size="sm">Sertifikalar</Text>
+                      <Text c="dimmed" size="sm">Sertifikalar</Text>
                       <Button
                         component="label"
                         size="xs"
