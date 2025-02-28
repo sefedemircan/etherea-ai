@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Paper, Stack, Title, Textarea, Button, Group, Text, LoadingOverlay } from '@mantine/core';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Paper, Stack, Title, Textarea, Button, Group, Text, LoadingOverlay, Tabs } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconSend, IconBrain } from '@tabler/icons-react';
+import { IconSend, IconBrain, IconKeyboard, IconMicrophone } from '@tabler/icons-react';
 import { journalApi, recommendationsApi } from '../services/supabase';
 import { aiApi } from '../services/openai';
+import VoiceRecorder from '../components/VoiceRecorder';
 
 function JournalEntry() {
   const { date } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [content, setContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [existingEntry, setExistingEntry] = useState(null);
+  const [activeTab, setActiveTab] = useState(location.state?.initialTab || 'text');
 
   useEffect(() => {
     if (date) {
@@ -152,6 +155,10 @@ function JournalEntry() {
     }
   };
 
+  const handleVoiceTranscription = (transcription) => {
+    setContent(prev => prev ? `${prev}\n\n${transcription}` : transcription);
+  };
+
   return (
     <Stack spacing="lg">
       <Paper shadow="sm" p="md" radius="md" pos="relative">
@@ -159,26 +166,57 @@ function JournalEntry() {
         <Title order={4} mb="md">
           {date ? `${date} Tarihli Günlük` : 'Yeni Günlük Girdisi'}
         </Title>
-        <Textarea
-          placeholder="Bugün nasıl hissediyorsun?"
-          minRows={10}
-          autosize
-          value={content}
-          onChange={(event) => setContent(event.currentTarget.value)}
-          styles={{
-            input: {
-              backgroundColor: '#F9F6FF',
-              color: '#5E4B8B',
-              border: '1px solid #E2D8FF',
-              '&:focus': {
-                borderColor: '#9A7BFF',
-              },
-              '&::placeholder': {
-                color: '#9A7BFF',
-              },
-            },
-          }}
-        />
+
+        <Tabs value={activeTab} onChange={setActiveTab} mb="md">
+          <Tabs.List>
+            <Tabs.Tab
+              value="text"
+              leftSection={<IconKeyboard size={16} />}
+            >
+              Yazı
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="voice"
+              leftSection={<IconMicrophone size={16} />}
+            >
+              Ses
+            </Tabs.Tab>
+          </Tabs.List>
+
+          <Tabs.Panel value="text" pt="xs">
+            <Textarea
+              placeholder="Bugün nasıl hissediyorsun?"
+              minRows={10}
+              autosize
+              value={content}
+              onChange={(event) => setContent(event.currentTarget.value)}
+              styles={{
+                input: {
+                  backgroundColor: '#F9F6FF',
+                  color: '#5E4B8B',
+                  border: '1px solid #E2D8FF',
+                  '&:focus': {
+                    borderColor: '#9A7BFF',
+                  },
+                  '&::placeholder': {
+                    color: '#9A7BFF',
+                  },
+                },
+              }}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="voice" pt="xs">
+            <VoiceRecorder onTranscriptionComplete={handleVoiceTranscription} />
+            {content && (
+              <Paper shadow="xs" p="sm" radius="md" bg="etherea.1" mt="md">
+                <Text fw={500} size="sm" c="etherea.7" mb="xs">Kaydedilen Metin:</Text>
+                <Text c="etherea.6">{content}</Text>
+              </Paper>
+            )}
+          </Tabs.Panel>
+        </Tabs>
+
         <Group mt="md" justify="space-between">
           <Button
             leftSection={<IconBrain size={20} />}

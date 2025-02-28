@@ -37,7 +37,7 @@ function QuickActions({ onNewEntry }) {
         <Button bg="etherea.1" leftSection={<IconPencil size={20} />} onClick={() => onNewEntry('text')}>
           Yazı
         </Button>
-        <Button bg="etherea.2" leftSection={<IconMicrophone size={20} />} onClick={() => onNewEntry('voice')} disabled>
+        <Button bg="etherea.2" leftSection={<IconMicrophone size={20} />} onClick={() => onNewEntry('voice')}>
           Ses
         </Button>
         <Button bg="etherea.3" leftSection={<IconUpload size={20} />} onClick={() => onNewEntry('file')} disabled>
@@ -90,7 +90,11 @@ function Home() {
   };
 
   const handleNewEntry = (type) => {
-    navigate('/entry');
+    if (type === 'voice') {
+      navigate('/entry', { state: { initialTab: 'voice' } });
+    } else {
+      navigate('/entry');
+    }
   };
 
   const getDayProps = (date) => {
