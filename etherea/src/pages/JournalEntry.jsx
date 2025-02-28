@@ -170,13 +170,17 @@ function JournalEntry() {
         <Tabs value={activeTab} onChange={setActiveTab} mb="md">
           <Tabs.List>
             <Tabs.Tab
+              bg={activeTab === 'text' ? 'etherea.2' : 'transparent'}
+              c="etherea.5"
               value="text"
               leftSection={<IconKeyboard size={16} />}
             >
               Yazı
             </Tabs.Tab>
             <Tabs.Tab
+              bg={activeTab === 'voice' ? 'etherea.2' : 'transparent'}
               value="voice"
+              c="etherea.5"
               leftSection={<IconMicrophone size={16} />}
             >
               Ses
