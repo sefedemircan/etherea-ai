@@ -41,7 +41,7 @@ export default function SignIn() {
       <Paper shadow="md" p="xl" w={400}>
         <form onSubmit={handleSubmit}>
           <Stack>
-            <Title order={2} c="#5E4B8B" ta="center">Etherea'ya Hoş Geldiniz</Title>
+            <Title order={2} c="#5E4B8B" ta="center">Hoş Geldiniz</Title>
             <Text c="dimmed" size="sm" ta="center">
               Günlüğünüze devam etmek için giriş yapın
             </Text>
