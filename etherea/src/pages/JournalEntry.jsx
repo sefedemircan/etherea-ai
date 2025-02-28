@@ -167,7 +167,7 @@ function JournalEntry() {
           {date ? `${date} Tarihli Günlük` : 'Yeni Günlük Girdisi'}
         </Title>
 
-        <Tabs value={activeTab} onChange={setActiveTab} mb="md">
+        <Tabs variant='pills' value={activeTab} onChange={setActiveTab} mb="md">
           <Tabs.List>
             <Tabs.Tab
               bg={activeTab === 'text' ? 'etherea.2' : 'transparent'}
