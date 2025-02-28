@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Center } from '@mantine/core';
+import { useNavigate, Link } from 'react-router-dom';
+import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Center, Container, Divider } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../services/supabase';
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -17,18 +18,44 @@ export default function SignIn() {
 
     try {
       setLoading(true);
-      await signIn({ email, password });
+      
+      // Giriş yap
+      const { user, session } = await signIn({ email, password });
+      
+      if (!user?.id) {
+        throw new Error('Kullanıcı bilgileri alınamadı');
+      }
+
+      // Kullanıcının rolünü veritabanından al
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (roleError) {
+        console.error('Rol kontrolü hatası:', roleError);
+        throw new Error('Kullanıcı rolü kontrol edilemedi');
+      }
+
       notifications.show({
         title: 'Başarılı',
         message: 'Hoş geldiniz!',
         color: 'white',
         bg: 'etherea.7',
       });
-      navigate('/');
+
+      // Kullanıcı rolüne göre yönlendirme yap
+      if (userRole?.role === 'therapist') {
+        navigate('/therapist/profile');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
+      console.error('Giriş hatası:', error);
       notifications.show({
         title: 'Hata',
-        message: 'Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.',
+        message: error.message || 'Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.',
         color: 'red',
       });
     } finally {
@@ -37,53 +64,54 @@ export default function SignIn() {
   };
 
   return (
-    <Center h="100vh" bg="#F9F6FF">
-      <Paper shadow="md" p="xl" w={400}>
+    <Container size="xs" py="xl">
+      <Paper shadow="md" radius="md" p="xl" withBorder>
+        <Title order={2} ta="center" mb="xl">
+          Etherea'ya Hoş Geldiniz
+        </Title>
+
         <form onSubmit={handleSubmit}>
           <Stack>
-            <Title order={2} c="#5E4B8B" ta="center">Hoş Geldiniz</Title>
-            <Text c="dimmed" size="sm" ta="center">
-              Günlüğünüze devam etmek için giriş yapın
-            </Text>
-
             <TextInput
+              required
               name="email"
               label="E-posta"
               placeholder="ornek@mail.com"
-              required
             />
-
             <PasswordInput
+              required
               name="password"
               label="Şifre"
-              placeholder="••••••••"
-              required
+              placeholder="******"
             />
 
-            <Button
-              type="submit"
-              loading={loading}
-              variant="light"
-              color="etherea.4"
-              fullWidth
-            >
+            <Button type="submit" loading={loading}>
               Giriş Yap
             </Button>
-
-            <Text size="sm" ta="center">
-              Hesabınız yok mu?{' '}
-              <Text
-                span
-                c="#9A7BFF"
-                style={{ cursor: 'pointer' }}
-                onClick={() => navigate('/auth/signup')}
-              >
-                Kayıt Olun
-              </Text>
-            </Text>
           </Stack>
         </form>
+
+        <Divider my="lg" label="veya" labelPosition="center" />
+
+        <Stack spacing="xs">
+          <Button
+            component={Link}
+            to="/auth/signup"
+            variant="light"
+          >
+            Yeni Hesap Oluştur
+          </Button>
+          
+          <Button
+            component={Link}
+            to="/auth/therapist-signup"
+            variant="subtle"
+            color="etherea.6"
+          >
+            Psikolog Olarak Kaydol
+          </Button>
+        </Stack>
       </Paper>
-    </Center>
+    </Container>
   );
 } 

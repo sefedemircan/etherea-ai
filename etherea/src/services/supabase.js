@@ -18,7 +18,8 @@ export const authApi = {
       password,
       options: {
         data: {
-          name: name // Kullanıcı metadatasına ismi ekliyoruz
+          name: name,
+          role: 'therapist'
         }
       }
     });
@@ -38,7 +39,7 @@ export const authApi = {
     });
 
     if (error) throw error;
-    return data;
+    return { user: data.user, session: data.session };
   },
 
   async signOut() {
