@@ -38,21 +38,33 @@ create table if not exists profiles (
 -- Yeni kullanıcı kaydında otomatik profil oluşturma
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+  v_role user_role;
+  v_name text;
 begin
+  -- Kullanıcının rolünü belirle
+  v_role := case when exists (
+    select 1 from public.therapist_profiles where id = new.id
+  ) then 'therapist'::user_role
+  else 'user'::user_role
+  end;
+
+  -- İsmi belirle
+  if v_role = 'therapist' then
+    select full_name into v_name
+    from public.therapist_profiles
+    where id = new.id;
+  else
+    v_name := new.raw_user_meta_data->>'name';
+  end if;
+
   -- Profil oluştur
   insert into public.profiles (id, name)
-  values (new.id, new.raw_user_meta_data->>'name');
+  values (new.id, coalesce(v_name, new.email));
 
-  -- Rol oluştur (eğer therapist_profiles tablosunda varsa psikolog, yoksa normal kullanıcı)
+  -- Rol oluştur
   insert into public.user_roles (id, role)
-  values (
-    new.id,
-    case when exists (
-      select 1 from public.therapist_profiles where id = new.id
-    ) then 'therapist'::user_role
-    else 'user'::user_role
-    end
-  );
+  values (new.id, v_role);
 
   return new;
 end;
@@ -171,6 +183,7 @@ create table if not exists appointments (
 );
 
 -- Mesajlaşma tablosu
+drop table if exists messages;
 create table if not exists messages (
   id uuid default uuid_generate_v4() primary key,
   sender_id uuid references auth.users(id) on delete cascade,
@@ -178,8 +191,20 @@ create table if not exists messages (
   content text not null,
   is_read boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()),
-  updated_at timestamp with time zone default timezone('utc'::text, now())
+  updated_at timestamp with time zone default timezone('utc'::text, now()),
+  constraint fk_sender_profile foreign key (sender_id) references profiles(id),
+  constraint fk_receiver_profile foreign key (receiver_id) references profiles(id)
 );
+
+-- RLS politikası
+alter table messages enable row level security;
+create policy "Kullanıcılar kendi mesajlarını görebilir"
+  on messages for select
+  using ( auth.uid() = sender_id or auth.uid() = receiver_id );
+
+create policy "Kullanıcılar mesaj gönderebilir"
+  on messages for insert
+  with check ( auth.uid() = sender_id );
 
 -- Değerlendirme tablosu
 create table if not exists therapist_reviews (
@@ -239,15 +264,6 @@ create policy "İlgili kişiler randevuları güncelleyebilir"
   on appointments for update
   using ( auth.uid() = user_id or auth.uid() = therapist_id )
   with check ( auth.uid() = user_id or auth.uid() = therapist_id );
-
-alter table messages enable row level security;
-create policy "Kullanıcılar kendi mesajlarını görebilir"
-  on messages for select
-  using ( auth.uid() = sender_id or auth.uid() = receiver_id );
-
-create policy "Kullanıcılar mesaj gönderebilir"
-  on messages for insert
-  with check ( auth.uid() = sender_id );
 
 alter table therapist_reviews enable row level security;
 create policy "Kullanıcılar kendi değerlendirmelerini yönetebilir"

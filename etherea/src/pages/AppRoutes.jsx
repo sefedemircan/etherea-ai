@@ -6,10 +6,13 @@ import JournalEntry from './JournalEntry';
 import JournalList from './JournalList';
 import Analysis from './Analysis';
 import Recommendations from './Recommendations';
+import Messages from './Messages';
+import TherapistList from './TherapistList';
 import SignIn from './auth/SignIn';
 import SignUp from './auth/SignUp';
 import TherapistSignUp from './auth/TherapistSignUp';
 import TherapistProfile from './therapist/Profile';
+import TherapistMessages from './therapist/Messages';
 
 function AppRoutes() {
   return (
@@ -28,11 +31,13 @@ function AppRoutes() {
         <Route path="/journals" element={<JournalList />} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/recommendations" element={<Recommendations />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/therapists" element={<TherapistList />} />
 
         {/* Psikolog sayfaları */}
         <Route path="/therapist/profile" element={<TherapistProfile />} />
+        <Route path="/therapist/messages" element={<TherapistMessages />} />
         <Route path="/therapist/appointments" element={<div>Randevularım</div>} />
-        <Route path="/therapist/messages" element={<div>Mesajlarım</div>} />
         <Route path="/therapist/settings" element={<div>Ayarlar</div>} />
       </Route>
 
