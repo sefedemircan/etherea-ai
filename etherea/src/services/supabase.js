@@ -325,4 +325,386 @@ export const recommendationsApi = {
 
     if (error) throw error;
   }
+};
+
+// Admin işlemleri
+export const adminApi = {
+  async getAllTherapists(status = 'all') {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Terapistleri getir
+    let query = supabase
+      .from('therapist_profiles')
+      .select('*');
+    
+    // Onay durumuna göre filtrele
+    if (status === 'verified') {
+      query = query.eq('is_verified', true);
+    } else if (status === 'pending') {
+      query = query.eq('is_verified', false);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+  
+  async verifyTherapist(therapistId, isVerified) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Terapist onayını güncelle
+    const { data, error } = await supabase
+      .from('therapist_profiles')
+      .update({ is_verified: isVerified })
+      .eq('id', therapistId)
+      .select();
+    
+    if (error) throw error;
+    return data[0];
+  },
+  
+  async getSystemStats() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Kullanıcı sayıları
+    const { count: userCount, error: userError } = await supabase
+      .from('user_roles')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'user');
+    
+    if (userError) throw userError;
+    
+    // Terapist sayıları
+    const { count: therapistCount, error: therapistError } = await supabase
+      .from('user_roles')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'therapist');
+    
+    if (therapistError) throw therapistError;
+    
+    // Onay bekleyen terapist sayısı
+    const { count: pendingTherapistCount, error: pendingError } = await supabase
+      .from('therapist_profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_verified', false);
+    
+    if (pendingError) throw pendingError;
+    
+    // Toplam randevu sayısı
+    const { count: appointmentCount, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true });
+    
+    if (appointmentError) throw appointmentError;
+    
+    return {
+      userCount,
+      therapistCount,
+      pendingTherapistCount,
+      appointmentCount
+    };
+  },
+  
+  async setUserRole(userId, role) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Kullanıcı rolünü güncelle
+    const { data, error } = await supabase
+      .from('user_roles')
+      .update({ role })
+      .eq('id', userId)
+      .select();
+    
+    if (error) throw error;
+    return data[0];
+  },
+  
+  async getAllUsers() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Tüm kullanıcı rollerini getir
+    const { data: userRoles, error: userRolesError } = await supabase
+      .from('user_roles')
+      .select('id, role, created_at')
+      .order('created_at', { ascending: false });
+    
+    if (userRolesError) throw userRolesError;
+    
+    // Tüm profilleri getir
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name');
+      
+    if (profilesError) throw profilesError;
+    
+    // Verileri birleştir
+    const users = userRoles.map(userRole => {
+      const profile = profiles.find(p => p.id === userRole.id) || {};
+      
+      // E-posta bilgisi için kullanıcı ID'sini kullan
+      // Gerçek uygulamada bu bilgiyi backend'den almanız gerekebilir
+      const email = userRole.id === user.id ? user.email : `user-${userRole.id.substring(0, 8)}@etherea.app`;
+      
+      return {
+        id: userRole.id,
+        role: userRole.role,
+        created_at: userRole.created_at,
+        name: profile.name || 'İsimsiz Kullanıcı',
+        email: email
+      };
+    });
+    
+    return users;
+  },
+  
+  async getAllAppointments() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Tüm randevuları getir
+    const { data: appointments, error: appointmentsError } = await supabase
+      .from('appointments')
+      .select('*')
+      .order('appointment_date', { ascending: false });
+    
+    if (appointmentsError) throw appointmentsError;
+    
+    // Kullanıcı ve psikolog bilgilerini ayrı ayrı getir
+    const userIds = appointments.map(a => a.user_id);
+    const therapistIds = appointments.map(a => a.therapist_id);
+    
+    // Kullanıcı profillerini getir
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', userIds);
+      
+    if (profilesError) throw profilesError;
+    
+    // Psikolog profillerini getir
+    const { data: therapists, error: therapistsError } = await supabase
+      .from('therapist_profiles')
+      .select('id, full_name')
+      .in('id', therapistIds);
+      
+    if (therapistsError) throw therapistsError;
+    
+    // Verileri birleştir
+    const result = appointments.map(appointment => {
+      const userProfile = profiles.find(p => p.id === appointment.user_id) || {};
+      const therapistProfile = therapists.find(t => t.id === appointment.therapist_id) || {};
+      
+      return {
+        ...appointment,
+        user_name: userProfile.name || 'İsimsiz Kullanıcı',
+        therapist_name: therapistProfile.full_name || 'İsimsiz Psikolog'
+      };
+    });
+    
+    return result;
+  },
+  
+  async updateAppointmentStatus(appointmentId, status) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Randevu durumunu güncelle
+    const { data, error } = await supabase
+      .from('appointments')
+      .update({ status })
+      .eq('id', appointmentId)
+      .select();
+    
+    if (error) throw error;
+    return data[0];
+  },
+  
+  async updateSystemSettings(settings) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Sistem ayarlarını güncelle
+    const { data, error } = await supabase
+      .from('system_settings')
+      .update({ 
+        value: settings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('key', 'general')
+      .select();
+    
+    if (error) throw error;
+    return data[0];
+  },
+  
+  async updateEmailSettings(settings) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // E-posta ayarlarını güncelle
+    const { data, error } = await supabase
+      .from('system_settings')
+      .update({ 
+        value: settings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('key', 'email')
+      .select();
+    
+    if (error) throw error;
+    return data[0];
+  },
+  
+  async clearSystemCache() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Burada gerçek bir önbellek temizleme işlemi yapmanız gerekecek
+    // Şimdilik başarılı olduğunu varsayalım
+    return { success: true };
+  },
+
+  async getSystemSettings() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // Sistem ayarlarını getir
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'general')
+      .single();
+    
+    if (error) throw error;
+    return data.value;
+  },
+  
+  async getEmailSettings() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Kullanıcının admin olup olmadığını kontrol et
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (roleError) throw roleError;
+    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
+    
+    // E-posta ayarlarını getir
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'email')
+      .single();
+    
+    if (error) throw error;
+    return data.value;
+  },
 }; 

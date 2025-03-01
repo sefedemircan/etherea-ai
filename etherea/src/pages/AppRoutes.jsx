@@ -14,6 +14,13 @@ import TherapistSignUp from './auth/TherapistSignUp';
 import TherapistProfile from './therapist/Profile';
 import TherapistMessages from './therapist/Messages';
 
+// Admin sayfaları
+import AdminDashboard from './admin/Dashboard';
+import AdminTherapists from './admin/Therapists';
+import AdminUsers from './admin/Users';
+import AdminAppointments from './admin/Appointments';
+import AdminSettings from './admin/Settings';
+
 function AppRoutes() {
   return (
     <Routes>
@@ -39,6 +46,13 @@ function AppRoutes() {
         <Route path="/therapist/messages" element={<TherapistMessages />} />
         <Route path="/therapist/appointments" element={<div>Randevularım</div>} />
         <Route path="/therapist/settings" element={<div>Ayarlar</div>} />
+        
+        {/* Admin sayfaları */}
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/therapists" element={<AdminTherapists />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/appointments" element={<AdminAppointments />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
       </Route>
 
       {/* Bilinmeyen rotaları ana sayfaya yönlendir */}

@@ -355,4 +355,32 @@ end;
 $$ language plpgsql security definer;
 
 -- Fonksiyonu çalıştır
-select migrate_existing_users_to_roles(); 
+select migrate_existing_users_to_roles();
+
+-- Sistem ayarları tablosu
+create table if not exists system_settings (
+  id serial primary key,
+  key text not null unique,
+  value jsonb not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- RLS politikası
+alter table system_settings enable row level security;
+
+create policy "Sadece adminler sistem ayarlarını yönetebilir"
+  on system_settings for all
+  using ( auth.uid() in (
+    select id from user_roles where role = 'admin'
+  ))
+  with check ( auth.uid() in (
+    select id from user_roles where role = 'admin'
+  ));
+
+-- Varsayılan sistem ayarlarını ekle
+insert into system_settings (key, value)
+values 
+  ('general', '{"allowNewRegistrations": true, "allowTherapistRegistrations": true, "maintenanceMode": false, "sessionFeePercentage": 10}'::jsonb),
+  ('email', '{"sendWelcomeEmails": true, "sendAppointmentReminders": true, "reminderHoursBeforeAppointment": 24, "adminEmail": "admin@etherea.com"}'::jsonb)
+on conflict (key) do nothing; 

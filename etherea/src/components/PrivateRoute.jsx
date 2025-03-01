@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import Layout from './Layout';
 import TherapistLayout from './TherapistLayout';
+import AdminLayout from './AdminLayout';
 
 export default function PrivateRoute() {
   const { user, loading } = useAuth();
@@ -44,6 +45,8 @@ export default function PrivateRoute() {
   // Kullanıcı rolüne göre layout seç
   if (userRole === 'therapist') {
     return <TherapistLayout />;
+  } else if (userRole === 'admin') {
+    return <AdminLayout />;
   }
 
   return <Layout />;
