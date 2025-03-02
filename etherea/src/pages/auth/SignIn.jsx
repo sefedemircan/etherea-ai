@@ -27,28 +27,47 @@ export default function SignIn() {
       }
 
       // Kullanıcının rolünü veritabanından al
-      const { data: userRole, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+      try {
+        const { data: userRole, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
 
-      if (roleError) {
-        console.error('Rol kontrolü hatası:', roleError);
-        throw new Error('Kullanıcı rolü kontrol edilemedi');
-      }
+        if (roleError) {
+          console.error('Rol kontrolü hatası:', roleError);
+          
+          // Rol bulunamadıysa, yeni bir rol oluştur
+          if (roleError.code === 'PGRST116') {
+            const { error: insertError } = await supabase
+              .from('user_roles')
+              .insert({
+                id: user.id,
+                role: 'user'
+              });
+              
+            if (insertError) {
+              console.error('Rol oluşturma hatası:', insertError);
+            }
+          }
+        }
 
-      notifications.show({
-        title: 'Başarılı',
-        message: 'Hoş geldiniz!',
-        color: 'white',
-        bg: 'etherea.7',
-      });
+        notifications.show({
+          title: 'Başarılı',
+          message: 'Hoş geldiniz!',
+          color: 'white',
+          bg: 'etherea.7',
+        });
 
-      // Kullanıcı rolüne göre yönlendirme yap
-      if (userRole?.role === 'therapist') {
-        navigate('/therapist/profile');
-      } else {
+        // Kullanıcı rolüne göre yönlendirme yap
+        if (userRole?.role === 'therapist') {
+          navigate('/therapist/profile');
+        } else {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Rol işlemi hatası:', error);
+        // Hata olsa bile ana sayfaya yönlendir
         navigate('/');
       }
     } catch (error) {

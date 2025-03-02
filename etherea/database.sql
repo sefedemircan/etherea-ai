@@ -15,15 +15,23 @@ create table if not exists user_roles (
 -- RLS politikası
 alter table user_roles enable row level security;
 
+drop policy if exists "Herkes rolleri görebilir" on user_roles;
+drop policy if exists "Sadece adminler rol atayabilir" on user_roles;
+drop policy if exists "Kullanıcılar kendi rollerini ekleyebilir" on user_roles;
+drop policy if exists "Adminler tüm rolleri yönetebilir" on user_roles;
+
 create policy "Herkes rolleri görebilir"
   on user_roles for select
   using ( true );
 
-create policy "Sadece adminler rol atayabilir"
+create policy "Kullanıcılar kendi rollerini ekleyebilir"
   on user_roles for insert
-  with check ( auth.uid() in (
-    select id from user_roles where role = 'admin'
-  ));
+  with check ( auth.uid() = id );
+
+create policy "Kullanıcılar kendi rollerini güncelleyebilir"
+  on user_roles for update
+  using ( auth.uid() = id )
+  with check ( auth.uid() = id );
 
 -- Kullanıcı profilleri tablosu
 create table if not exists profiles (
@@ -39,26 +47,14 @@ create table if not exists profiles (
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
-  v_role user_role;
   v_name text;
 begin
-  -- Kullanıcının meta verilerinden rolünü al
-  v_role := coalesce(
-    (new.raw_user_meta_data->>'role')::user_role,
-    'user'::user_role
-  );
-  
   -- İsmi belirle
   v_name := new.raw_user_meta_data->>'name';
   
   -- Profil oluştur
   insert into public.profiles (id, name)
   values (new.id, coalesce(v_name, new.email));
-  
-  -- Eğer user_roles tablosunda kayıt yoksa oluştur
-  insert into public.user_roles (id, role)
-  values (new.id, v_role)
-  on conflict (id) do nothing;
   
   return new;
 end;

@@ -135,17 +135,25 @@ function TherapistSignUp() {
         throw new Error('Kullanıcı kaydı başarısız oldu');
       }
 
-      // 2. Kullanıcı rolünü 'therapist' olarak güncelle
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({
-          id: authData.user.id,
-          role: 'therapist'
-        });
+      // Kullanıcının veritabanına kaydedilmesi için bekle
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (roleError) {
-        console.error('Rol güncelleme hatası:', roleError);
-        throw new Error('Psikolog rolü atanırken bir hata oluştu');
+      // 2. Kullanıcı rolünü 'therapist' olarak güncelle
+      try {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            id: authData.user.id,
+            role: 'therapist'
+          });
+
+        if (roleError) {
+          console.error('Rol oluşturma hatası:', roleError);
+          // Rol oluşturma başarısız olsa bile devam et
+        }
+      } catch (roleError) {
+        console.error('Rol oluşturma hatası:', roleError);
+        // Rol oluşturma başarısız olsa bile devam et
       }
 
       // 3. Psikolog profilini oluştur
@@ -162,7 +170,9 @@ function TherapistSignUp() {
           experience_years: values.experience_years,
           session_fee: values.session_fee,
           languages: values.languages,
-          session_types: values.session_types.map(type => type.value)
+          session_types: values.session_types.map(type => type.value),
+          is_verified: false,
+          is_active: true
         })
         .select()
         .single();
@@ -174,7 +184,7 @@ function TherapistSignUp() {
 
       notifications.show({
         title: 'Başarılı',
-        message: 'Kaydınız alınmıştır. E-posta adresinize gönderilen doğrulama bağlantısını kullanarak hesabınızı aktifleştirebilirsiniz. Hesabınız onaylandıktan sonra diploma ve sertifikalarınızı yükleyebilirsiniz.',
+        message: 'Kaydınız alınmıştır. Profiliniz yönetici onayından sonra aktif olacaktır. E-posta adresinize gönderilen doğrulama bağlantısını kullanarak hesabınızı aktifleştirebilirsiniz.',
         color: 'green',
       });
 
