@@ -135,10 +135,20 @@ function TherapistSignUp() {
         throw new Error('Kullanıcı kaydı başarısız oldu');
       }
 
-      // Kullanıcının oluşturulmasını bekle
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 2. Kullanıcı rolünü 'therapist' olarak güncelle
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({
+          id: authData.user.id,
+          role: 'therapist'
+        });
 
-      // 2. Psikolog profilini oluştur
+      if (roleError) {
+        console.error('Rol güncelleme hatası:', roleError);
+        throw new Error('Psikolog rolü atanırken bir hata oluştu');
+      }
+
+      // 3. Psikolog profilini oluştur
       const { data: profile, error: profileError } = await supabase
         .from('therapist_profiles')
         .insert({

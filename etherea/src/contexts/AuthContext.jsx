@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
 
     // Oturum değişikliklerini dinle
     const { data: { subscription } } = authApi.onAuthStateChange((_event, session) => {
+      //console.log('Oturum değişikliği:', _event, session?.user ?? null);
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -23,9 +24,10 @@ export function AuthProvider({ children }) {
   async function checkUser() {
     try {
       const session = await authApi.getSession();
+      //console.log('Mevcut oturum kontrolü:', session?.user ?? null);
       setUser(session?.user ?? null);
     } catch (error) {
-      console.error('Oturum kontrolü hatası:', error);
+      //console.error('Oturum kontrolü hatası:', error);
     } finally {
       setLoading(false);
     }

@@ -13,23 +13,38 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Kimlik doğrulama işlemleri
 export const authApi = {
   async signUp({ email, password, name }) {
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name: name,
-          role: 'therapist'
+    try {
+      console.log('Kayıt işlemi başlatılıyor:', { email, name });
+      
+      // Kullanıcı oluştur
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+            role: 'user' // Varsayılan olarak 'user' rolü atıyoruz
+          },
+          emailRedirectTo: window.location.origin + '/auth/signin'
         }
+      });
+
+      if (authError) {
+        console.error('Auth hatası:', authError);
+        throw authError;
       }
-    });
 
-    if (authError) throw authError;
+      if (!authData?.user) {
+        console.error('Kullanıcı oluşturulamadı:', authData);
+        throw new Error('Kullanıcı kaydı başarısız oldu');
+      }
 
-    // Profil oluşturmayı kaldırıyoruz çünkü bu işlemi
-    // database trigger ile yapacağız
-
-    return authData;
+      console.log('Kullanıcı başarıyla oluşturuldu:', authData.user.id);
+      return authData;
+    } catch (error) {
+      console.error('signUp fonksiyonunda hata:', error);
+      throw error;
+    }
   },
 
   async signIn({ email, password }) {

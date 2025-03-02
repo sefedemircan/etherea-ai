@@ -42,30 +42,24 @@ declare
   v_role user_role;
   v_name text;
 begin
-  -- Kullanıcının rolünü belirle
-  v_role := case when exists (
-    select 1 from public.therapist_profiles where id = new.id
-  ) then 'therapist'::user_role
-  else 'user'::user_role
-  end;
-
+  -- Kullanıcının meta verilerinden rolünü al
+  v_role := coalesce(
+    (new.raw_user_meta_data->>'role')::user_role,
+    'user'::user_role
+  );
+  
   -- İsmi belirle
-  if v_role = 'therapist' then
-    select full_name into v_name
-    from public.therapist_profiles
-    where id = new.id;
-  else
-    v_name := new.raw_user_meta_data->>'name';
-  end if;
-
+  v_name := new.raw_user_meta_data->>'name';
+  
   -- Profil oluştur
   insert into public.profiles (id, name)
   values (new.id, coalesce(v_name, new.email));
-
-  -- Rol oluştur
+  
+  -- Eğer user_roles tablosunda kayıt yoksa oluştur
   insert into public.user_roles (id, role)
-  values (new.id, v_role);
-
+  values (new.id, v_role)
+  on conflict (id) do nothing;
+  
   return new;
 end;
 $$ language plpgsql security definer;

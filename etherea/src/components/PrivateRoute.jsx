@@ -1,15 +1,18 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import Layout from './Layout';
 import TherapistLayout from './TherapistLayout';
 import AdminLayout from './AdminLayout';
+import { Loader, Center } from '@mantine/core';
 
 export default function PrivateRoute() {
   const { user, loading } = useAuth();
   const [userRole, setUserRole] = useState(null);
   const [roleLoading, setRoleLoading] = useState(true);
+
+  //console.log('PrivateRoute: user:', user, 'loading:', loading, 'roleLoading:', roleLoading);
 
   useEffect(() => {
     async function loadUserRole() {
@@ -22,12 +25,16 @@ export default function PrivateRoute() {
             .single();
 
           if (error) throw error;
+          //console.log('Kullanıcı rolü yüklendi:', data?.role);
           setUserRole(data.role);
         } catch (error) {
-          console.error('Rol yüklenirken hata:', error);
+          //console.error('Rol yüklenirken hata:', error);
         } finally {
           setRoleLoading(false);
         }
+      } else {
+        //console.log('Kullanıcı olmadığı için rol yüklenemedi');
+        setRoleLoading(false);
       }
     }
 
@@ -35,19 +42,40 @@ export default function PrivateRoute() {
   }, [user]);
 
   if (loading || roleLoading) {
-    return null; // veya bir yükleme göstergesi
+    //console.log('Yükleniyor durumu, henüz yönlendirme yapılmıyor');
+    return (
+      <Center style={{ height: '100vh' }}>
+        <Loader color="etherea.4" size="lg" />
+      </Center>
+    );
   }
 
   if (!user) {
+    //console.log('Kullanıcı oturum açmamış, signin sayfasına yönlendiriliyor');
     return <Navigate to="/auth/signin" />;
   }
 
   // Kullanıcı rolüne göre layout seç
   if (userRole === 'therapist') {
-    return <TherapistLayout />;
+    //console.log('Terapist rolü tespit edildi, terapist layoutu gösteriliyor');
+    return (
+      <TherapistLayout>
+        <Outlet />
+      </TherapistLayout>
+    );
   } else if (userRole === 'admin') {
-    return <AdminLayout />;
+    //console.log('Admin rolü tespit edildi, admin layoutu gösteriliyor');
+    return (
+      <AdminLayout>
+        <Outlet />
+      </AdminLayout>
+    );
   }
 
-  return <Layout />;
+  //console.log('Normal kullanıcı layoutu gösteriliyor');
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  );
 } 

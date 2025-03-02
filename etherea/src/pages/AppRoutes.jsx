@@ -13,6 +13,7 @@ import SignUp from './auth/SignUp';
 import TherapistSignUp from './auth/TherapistSignUp';
 import TherapistProfile from './therapist/Profile';
 import TherapistMessages from './therapist/Messages';
+import { useAuth } from '../contexts/AuthContext';
 
 // Admin sayfaları
 import AdminDashboard from './admin/Dashboard';
@@ -22,6 +23,30 @@ import AdminAppointments from './admin/Appointments';
 import AdminSettings from './admin/Settings';
 
 function AppRoutes() {
+  const { user, loading } = useAuth();
+  
+  //console.log('AppRoutes: user:', user, 'loading:', loading);
+  
+  // Yükleme durumunda boş bir sayfa göster
+  if (loading) {
+    //console.log('AppRoutes: Yükleniyor...');
+    return <div>Yükleniyor...</div>;
+  }
+  
+  // Kullanıcı oturum açmamışsa doğrudan SignIn sayfasına yönlendir
+  if (!user) {
+    //console.log('AppRoutes: Kullanıcı oturum açmamış, SignIn sayfasına yönlendiriliyor');
+    return (
+      <Routes>
+        <Route path="/auth/signin" element={<SignIn />} />
+        <Route path="/auth/signup" element={<SignUp />} />
+        <Route path="/auth/therapist-signup" element={<TherapistSignUp />} />
+        <Route path="*" element={<Navigate to="/auth/signin" replace />} />
+      </Routes>
+    );
+  }
+
+  // Kullanıcı oturum açmışsa normal rotaları göster
   return (
     <Routes>
       {/* Kimlik doğrulama sayfaları */}
