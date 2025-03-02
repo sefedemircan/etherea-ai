@@ -306,7 +306,7 @@ function Profile() {
                     <Text fw={500} size="sm" c="dimmed">Konuşulan Diller</Text>
                     <Group>
                       {profile.languages.map((lang, index) => (
-                        <Badge key={index} variant="dot" color="etherea.4">
+                        <Badge key={index} variant="light" color="etherea.4">
                           {lang}
                         </Badge>
                       ))}
@@ -316,7 +316,7 @@ function Profile() {
                     <Text fw={500} size="sm" c="dimmed">Görüşme Tipleri</Text>
                     <Group>
                       {profile.session_types.map((type, index) => (
-                        <Badge key={index} variant="dot" color="etherea.4">
+                        <Badge key={index} variant="light" color="etherea.4">
                           {SESSION_TYPES.find(t => t.value === type)?.label}
                         </Badge>
                       ))}

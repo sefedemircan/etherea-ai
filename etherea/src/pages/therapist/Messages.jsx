@@ -53,7 +53,9 @@ function Messages() {
           receiver_id,
           content,
           created_at,
-          profiles!sender_id(name, avatar_url)
+          is_read,
+          sender:profiles!sender_id(id, name, avatar_url),
+          receiver:profiles!receiver_id(id, name, avatar_url)
         `)
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
@@ -67,38 +69,65 @@ function Messages() {
         uniqueUserIds.add(otherId);
       });
 
-      // Psikolog profillerini getir
-      const { data: therapistProfiles, error: therapistError } = await supabase
-        .from('therapist_profiles')
-        .select('id, full_name, avatar_url')
+      // Kullanıcı profillerini getir
+      const { data: userProfiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url')
         .in('id', Array.from(uniqueUserIds));
 
-      if (therapistError) throw therapistError;
+      if (profileError) throw profileError;
 
       // Profil bilgilerini Map'te sakla
-      const therapistProfileMap = new Map();
-      therapistProfiles?.forEach(profile => {
-        therapistProfileMap.set(profile.id, profile);
+      const userProfileMap = new Map();
+      userProfiles?.forEach(profile => {
+        userProfileMap.set(profile.id, profile);
       });
 
       // Konuşmaları kullanıcılara göre grupla
       const conversationMap = new Map();
       messages.forEach(message => {
-        const otherId = message.sender_id === user.id ? message.receiver_id : message.sender_id;
+        if (!message) return;
+        
+        const isUserSender = message.sender_id === user.id;
+        const otherId = isUserSender ? message.receiver_id : message.sender_id;
+        const otherProfile = isUserSender ? message.receiver : message.sender;
         
         // Diğer kullanıcının profil bilgilerini al
-        const normalProfile = message.profiles;
-        const therapistProfile = therapistProfileMap.get(otherId);
+        const userProfile = userProfileMap.get(otherId);
+        
+        // Varsayılan değerler
+        let name = 'İsimsiz Kullanıcı';
+        let avatar_url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherId}`;
+        
+        // Profil bilgilerini belirle
+        if (otherProfile) {
+          name = otherProfile.name || name;
+          avatar_url = otherProfile.avatar_url || avatar_url;
+        } else if (userProfile) {
+          name = userProfile.name || name;
+          avatar_url = userProfile.avatar_url || avatar_url;
+        }
 
-        if (!conversationMap.has(otherId)) {
+        const existingConv = conversationMap.get(otherId);
+        if (!existingConv) {
           conversationMap.set(otherId, {
             id: otherId,
-            name: therapistProfile?.full_name || normalProfile?.name || 'İsimsiz Kullanıcı',
-            avatar_url: therapistProfile?.avatar_url || normalProfile?.avatar_url,
-            lastMessage: message.content,
+            name: name,
+            avatar_url: avatar_url,
+            lastMessage: message.content || '',
             lastMessageDate: message.created_at,
-            unreadCount: message.is_read ? 0 : 1
+            unreadCount: (!isUserSender && !message.is_read) ? 1 : 0
           });
+        } else {
+          // Okunmamış mesaj sayısını güncelle
+          if (!isUserSender && !message.is_read) {
+            existingConv.unreadCount = (existingConv.unreadCount || 0) + 1;
+          }
+          // Son mesajı güncelle
+          if (message.created_at > existingConv.lastMessageDate) {
+            existingConv.lastMessage = message.content || '';
+            existingConv.lastMessageDate = message.created_at;
+          }
         }
       });
 
@@ -125,13 +154,30 @@ function Messages() {
           receiver_id,
           content,
           created_at,
-          profiles!sender_id(name, avatar_url)
+          sender:profiles!sender_id(id, name, avatar_url),
+          receiver:profiles!receiver_id(id, name, avatar_url)
         `)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data);
+      
+      // Mesajları zenginleştir
+      const enrichedMessages = data.map(message => {
+        const isUserSender = message.sender_id === user.id;
+        const senderProfile = isUserSender ? message.sender : message.receiver;
+        const receiverProfile = isUserSender ? message.receiver : message.sender;
+        
+        return {
+          ...message,
+          senderName: senderProfile?.name || 'İsimsiz Kullanıcı',
+          senderAvatar: senderProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.sender_id}`,
+          receiverName: receiverProfile?.name || 'İsimsiz Kullanıcı',
+          receiverAvatar: receiverProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${message.receiver_id}`
+        };
+      });
+      
+      setMessages(enrichedMessages);
 
       // Okunmamış mesajları okundu olarak işaretle
       await supabase
@@ -236,7 +282,7 @@ function Messages() {
                     <Group key={message.id} justify={message.sender_id === user.id ? 'flex-end' : 'flex-start'}>
                       {message.sender_id !== user.id && (
                         <Avatar 
-                          src={selectedUser?.avatar_url} 
+                          src={message.senderAvatar} 
                           radius="xl" 
                           size="sm"
                         />
@@ -248,30 +294,17 @@ function Messages() {
                         sx={(theme) => ({
                           maxWidth: '70%',
                           marginLeft: message.sender_id === user.id ? 'auto' : '0',
-                          marginRight: message.sender_id === user.id ? '0' : 'auto',
+                          color: message.sender_id === user.id ? 'white' : 'inherit'
                         })}
                       >
-                        <Text 
-                          size="sm" 
-                          c={message.sender_id === user.id ? 'white' : 'etherea.7'}
-                        >
-                          {message.content}
-                        </Text>
-                        <Text 
-                          size="xs" 
-                          c={message.sender_id === user.id ? 'gray.2' : 'dimmed'} 
-                          ta={message.sender_id === user.id ? 'right' : 'left'}
-                          mt={4}
-                        >
-                          {new Date(message.created_at).toLocaleTimeString('tr-TR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+                        <Text size="sm">{message.content}</Text>
+                        <Text size="xs" c="dimmed" align="right">
+                          {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Text>
                       </Paper>
                       {message.sender_id === user.id && (
                         <Avatar 
-                          src={user.user_metadata?.avatar_url} 
+                          src={message.senderAvatar} 
                           radius="xl" 
                           size="sm"
                         />

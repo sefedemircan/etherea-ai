@@ -82,7 +82,7 @@ function TherapistList() {
           .insert({
             sender_id: user.id,
             receiver_id: therapist.id,
-            content: 'Merhaba, sizinle görüşmek istiyorum.'
+            content: 'Merhaba!'
           });
 
         if (sendError) throw sendError;
