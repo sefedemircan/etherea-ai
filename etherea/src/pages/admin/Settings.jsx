@@ -169,15 +169,45 @@ export default function Settings() {
         Sistem Ayarları
       </Title>
 
-      <Accordion defaultValue="system" mb="xl">
+      <Accordion 
+        defaultValue="system" 
+        mb="xl"
+        styles={{
+          control: {
+            backgroundColor: '#F9F6FF',
+            '&:hover': {
+              backgroundColor: '#E6DFF8',
+            }
+          },
+          item: {
+            borderColor: '#E6DFF8',
+            '&[data-active]': {
+              backgroundColor: '#F9F6FF',
+            }
+          },
+          panel: {
+            backgroundColor: '#F9F6FF',
+          },
+          label: {
+            color: '#5E4B8B',
+            '&:hover': {
+              color: '#9A7BFF',
+            }
+          },
+          chevron: {
+            color: '#9A7BFF',
+          }
+        }}
+      >
         <Accordion.Item value="system">
           <Accordion.Control>
-            <Title order={4}>Genel Ayarlar</Title>
+            <Title order={4} c="etherea.7">Genel Ayarlar</Title>
           </Accordion.Control>
           <Accordion.Panel>
             <Paper p="md" withBorder>
               <Stack>
                 <Switch
+                  c="dimmed"
                   label="Yeni Kullanıcı Kayıtlarına İzin Ver"
                   checked={systemSettings.allowNewRegistrations}
                   onChange={(event) =>
@@ -186,6 +216,7 @@ export default function Settings() {
                 />
 
                 <Switch
+                  c="dimmed"
                   label="Psikolog Kayıtlarına İzin Ver"
                   checked={systemSettings.allowTherapistRegistrations}
                   onChange={(event) =>
@@ -194,6 +225,7 @@ export default function Settings() {
                 />
 
                 <Switch
+                  c="dimmed"
                   label="Bakım Modu"
                   description="Etkinleştirildiğinde, sadece adminler siteye erişebilir"
                   checked={systemSettings.maintenanceMode}
@@ -203,6 +235,7 @@ export default function Settings() {
                 />
 
                 <NumberInput
+                  c="dimmed"
                   label="Platform Komisyon Oranı (%)"
                   description="Psikolog seans ücretlerinden alınacak komisyon yüzdesi"
                   value={systemSettings.sessionFeePercentage}
@@ -213,6 +246,7 @@ export default function Settings() {
 
                 <Group position="right" mt="md">
                   <Button
+                    c="white"
                     color="etherea.4"
                     onClick={handleSaveSystemSettings}
                     loading={loading}
@@ -227,12 +261,13 @@ export default function Settings() {
 
         <Accordion.Item value="email">
           <Accordion.Control>
-            <Title order={4}>E-posta Ayarları</Title>
+            <Title order={4} c="etherea.7">E-posta Ayarları</Title>
           </Accordion.Control>
           <Accordion.Panel>
             <Paper p="md" withBorder>
               <Stack>
                 <Switch
+                  c="dimmed"
                   label="Hoşgeldiniz E-postaları Gönder"
                   checked={emailSettings.sendWelcomeEmails}
                   onChange={(event) =>
@@ -241,6 +276,7 @@ export default function Settings() {
                 />
 
                 <Switch
+                  c="dimmed"
                   label="Randevu Hatırlatma E-postaları Gönder"
                   checked={emailSettings.sendAppointmentReminders}
                   onChange={(event) =>
@@ -249,6 +285,7 @@ export default function Settings() {
                 />
 
                 <NumberInput
+                  c="dimmed"
                   label="Randevu Hatırlatma Süresi (Saat)"
                   description="Randevudan kaç saat önce hatırlatma e-postası gönderilecek"
                   value={emailSettings.reminderHoursBeforeAppointment}
@@ -260,6 +297,7 @@ export default function Settings() {
                 />
 
                 <TextInput
+                  c="dimmed"
                   label="Admin E-posta Adresi"
                   description="Sistem bildirimleri bu adrese gönderilecek"
                   value={emailSettings.adminEmail}
@@ -270,6 +308,7 @@ export default function Settings() {
 
                 <Group position="right" mt="md">
                   <Button
+                    c="white"
                     color="etherea.4"
                     onClick={handleSaveEmailSettings}
                     loading={loading}
@@ -284,16 +323,16 @@ export default function Settings() {
 
         <Accordion.Item value="maintenance">
           <Accordion.Control>
-            <Title order={4}>Bakım İşlemleri</Title>
+            <Title order={4} c="etherea.7">Bakım İşlemleri</Title>
           </Accordion.Control>
           <Accordion.Panel>
             <Paper p="md" withBorder>
               <Stack>
-                <Alert icon={<IconAlertCircle size={16} />} color="orange">
-                  Aşağıdaki işlemler sistem performansını etkileyebilir. Lütfen dikkatli kullanın.
+                <Alert c="orange" icon={<IconAlertCircle size={16} />} color="orange">
+                  <Text c="dimmed">Aşağıdaki işlemler sistem performansını etkileyebilir. Lütfen dikkatli kullanın.</Text>
                 </Alert>
 
-                <Text>
+                <Text c="dimmed">
                   Sistem önbelleğini temizlemek, performansı geçici olarak düşürebilir ancak bazı
                   hataları çözebilir.
                 </Text>
@@ -301,6 +340,7 @@ export default function Settings() {
                 <Group position="right" mt="md">
                   <Button
                     color="orange"
+                    c="white"
                     onClick={handleClearCache}
                     loading={loading}
                   >

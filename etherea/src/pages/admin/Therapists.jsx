@@ -134,7 +134,7 @@ export default function Therapists() {
             {therapist.full_name?.charAt(0).toUpperCase() || 'T'}
           </Avatar>
           <div>
-            <Text size="sm" fw={500}>
+            <Text c="etherea.7" size="sm" fw={500}>
               {therapist.full_name}
             </Text>
             <Text size="xs" c="dimmed">
@@ -143,33 +143,31 @@ export default function Therapists() {
           </div>
         </Group>
       </td>
-      <td>
+      <td style={{ textAlign: 'center' }}>
         <Badge
-          color={therapist.is_verified ? 'green' : 'orange'}
-          variant="light"
+          color={therapist.is_verified ? 'teal' : 'orange'}
+          variant="filled"
         >
           {therapist.is_verified ? 'Onaylandı' : 'Onay Bekliyor'}
         </Badge>
       </td>
-      <td>
-        <Text size="sm">{therapist.experience_years} Yıl</Text>
+      <td style={{ textAlign: 'center' }}>
+        <Text c="etherea.7" size="sm">{therapist.experience_years} Yıl</Text>
       </td>
-      <td>
-        <Group gap={0} justify="right">
+      <td style={{ textAlign: 'center' }}>
+        <Group gap={0} justify="center">
           <Tooltip label="Detaylar">
-            <ActionIcon
-              onClick={() => {
+            <ActionIcon color="etherea.5">
+              <IconEye size={16} onClick={() => {
                 setSelectedTherapist(therapist);
                 setDetailsOpened(true);
-              }}
-            >
-              <IconEye size={16} />
+              }} />
             </ActionIcon>
           </Tooltip>
           {!therapist.is_verified && (
             <Tooltip label="Onayla">
               <ActionIcon
-                color="green"
+                color="teal"
                 onClick={() => {
                   setSelectedTherapist(therapist);
                   setVerifyOpened(true);
@@ -205,13 +203,28 @@ export default function Therapists() {
 
       <Tabs value={activeTab} onChange={setActiveTab} mb="md">
         <Tabs.List>
-          <Tabs.Tab value="all" leftSection={<IconUserCheck size={14} />}>
+          <Tabs.Tab 
+            c={activeTab === 'all' ? 'white' : 'etherea.6'} 
+            bg={activeTab === 'all' ? 'warmth.6' : 'transparent'} 
+            value="all" 
+            leftSection={<IconUserCheck size={14} />}
+          >
             Tümü
           </Tabs.Tab>
-          <Tabs.Tab value="pending" leftSection={<IconClock size={14} />}>
+          <Tabs.Tab 
+            c={activeTab === 'pending' ? 'white' : 'etherea.6'} 
+            bg={activeTab === 'pending' ? 'warmth.6' : 'transparent'} 
+            value="pending" 
+            leftSection={<IconClock size={14} />}
+          >
             Onay Bekleyenler
           </Tabs.Tab>
-          <Tabs.Tab value="verified" leftSection={<IconCheck size={14} />}>
+          <Tabs.Tab 
+            c={activeTab === 'verified' ? 'white' : 'etherea.6'} 
+            bg={activeTab === 'verified' ? 'warmth.6' : 'transparent'} 
+            value="verified" 
+            leftSection={<IconCheck size={14} />}
+          >
             Onaylananlar
           </Tabs.Tab>
         </Tabs.List>
@@ -222,13 +235,15 @@ export default function Therapists() {
           <Table striped highlightOnHover>
             <thead>
               <tr>
-                <th>Psikolog</th>
-                <th>Durum</th>
-                <th>Deneyim</th>
+                <th style={{ color: '#5E4B8B', textAlign: 'center' }}>Psikolog</th>
+                <th style={{ color: '#5E4B8B', textAlign: 'center' }}>Durum</th>
+                <th style={{ color: '#5E4B8B', textAlign: 'center' }}>Deneyim</th>
                 <th style={{ width: 100 }} />
               </tr>
             </thead>
-            <tbody>{rows}</tbody>
+            <tbody>
+              {rows}
+            </tbody>
           </Table>
         </ScrollArea>
       </Paper>
@@ -237,8 +252,16 @@ export default function Therapists() {
       <Modal
         opened={detailsOpened}
         onClose={() => setDetailsOpened(false)}
-        title={<Title order={4}>Psikolog Detayları</Title>}
+        title={<Title order={4} c="etherea.5">Psikolog Detayları</Title>}
         size="lg"
+        styles={{
+          header: {
+            backgroundColor: '#F9F6FF',
+          },
+          body: {
+            backgroundColor: '#F9F6FF',
+          }
+        }}
       >
         {selectedTherapist && (
           <Stack>
@@ -247,12 +270,12 @@ export default function Therapists() {
                 {selectedTherapist.full_name?.charAt(0).toUpperCase() || 'T'}
               </Avatar>
               <div>
-                <Text size="xl" fw={700}>
+                <Text size="xl" fw={700} c="etherea.7">
                   {selectedTherapist.full_name}
                 </Text>
-                <Text size="md">{selectedTherapist.title}</Text>
+                <Text size="md" c="etherea.6">{selectedTherapist.title}</Text>
                 <Badge
-                  color={selectedTherapist.is_verified ? 'green' : 'orange'}
+                  color={selectedTherapist.is_verified ? 'teal' : 'orange'}
                   variant="light"
                   size="sm"
                   mt={5}
@@ -265,14 +288,14 @@ export default function Therapists() {
             <Divider />
 
             <div>
-              <Text fw={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Hakkında
               </Text>
-              <Text size="sm">{selectedTherapist.about}</Text>
+              <Text size="sm" c="etherea.9">{selectedTherapist.about}</Text>
             </div>
 
             <div>
-              <Text fw={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Uzmanlık Alanları
               </Text>
               <Group gap={5}>
@@ -285,49 +308,49 @@ export default function Therapists() {
             </div>
 
             <div>
-              <Text fw={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Eğitim
               </Text>
               <List size="sm" spacing="xs">
                 {selectedTherapist.education?.map((edu, index) => (
-                  <List.Item key={index}>{edu}</List.Item>
+                  <List.Item key={index} c="etherea.9">{edu}</List.Item>
                 ))}
               </List>
             </div>
 
             <div>
-              <Text fw={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Sertifikalar
               </Text>
               <List size="sm" spacing="xs">
                 {selectedTherapist.certifications?.map((cert, index) => (
-                  <List.Item key={index}>{cert}</List.Item>
+                  <List.Item key={index} c="etherea.9">{cert}</List.Item>
                 ))}
               </List>
             </div>
 
             <Group>
               <div>
-                <Text fw={700} mb={5}>
+                <Text fw={700} mb={5} c="etherea.7">
                   Deneyim
                 </Text>
-                <Text>{selectedTherapist.experience_years} Yıl</Text>
+                <Text c="etherea.9">{selectedTherapist.experience_years} Yıl</Text>
               </div>
 
               <div>
-                <Text fw={700} mb={5}>
+                <Text fw={700} mb={5} c="etherea.7">
                   Seans Ücreti
                 </Text>
-                <Text>{selectedTherapist.session_fee} ₺</Text>
+                <Text c="etherea.9">{selectedTherapist.session_fee} ₺</Text>
               </div>
 
               <div>
-                <Text fw={700} mb={5}>
+                <Text fw={700} mb={5} c="etherea.7">
                   Diller
                 </Text>
                 <Group gap={5}>
                   {selectedTherapist.languages?.map((lang, index) => (
-                    <Badge key={index} color="serenity.3" variant="light">
+                    <Badge key={index} color="etherea.5" variant="light">
                       {lang}
                     </Badge>
                   ))}
@@ -336,12 +359,16 @@ export default function Therapists() {
             </Group>
 
             <Group justify="right" mt="md">
-              <Button variant="default" onClick={() => setDetailsOpened(false)}>
+              <Button 
+                variant="light" 
+                color="etherea.4" 
+                onClick={() => setDetailsOpened(false)}
+              >
                 Kapat
               </Button>
               {!selectedTherapist.is_verified ? (
                 <Button
-                  color="green"
+                  color="teal"
                   leftSection={<IconCheck size={16} />}
                   onClick={() => {
                     setDetailsOpened(false);
@@ -352,7 +379,8 @@ export default function Therapists() {
                 </Button>
               ) : (
                 <Button
-                  color="red"
+                  color="#DC143C"
+                  c="white"
                   leftSection={<IconX size={16} />}
                   onClick={() => {
                     setDetailsOpened(false);
@@ -371,20 +399,33 @@ export default function Therapists() {
       <Modal
         opened={verifyOpened}
         onClose={() => setVerifyOpened(false)}
-        title={<Title order={4}>Psikolog Onayı</Title>}
+        title={<Title order={4} c="etherea.7">Psikolog Onayı</Title>}
+        styles={{
+          header: {
+            backgroundColor: '#F9F6FF',
+          },
+          body: {
+            backgroundColor: '#F9F6FF',
+          }
+        }}
       >
-        <Text mb="md">
+        <Text mb="md" c="etherea.8">
           <b>{selectedTherapist?.full_name}</b> isimli psikoloğu onaylamak istediğinize emin misiniz?
         </Text>
         <Text size="sm" c="dimmed" mb="xl">
           Onaylandıktan sonra psikolog platformda hizmet vermeye başlayabilecek.
         </Text>
         <Group justify="right">
-          <Button variant="default" onClick={() => setVerifyOpened(false)} disabled={actionLoading}>
+          <Button 
+            variant="light" 
+            color="etherea.4" 
+            onClick={() => setVerifyOpened(false)} 
+            disabled={actionLoading}
+          >
             İptal
           </Button>
           <Button
-            color="green"
+            color="teal"
             leftSection={<IconCheck size={16} />}
             onClick={() => handleVerify(selectedTherapist?.id)}
             loading={actionLoading}
@@ -398,16 +439,29 @@ export default function Therapists() {
       <Modal
         opened={rejectOpened}
         onClose={() => setRejectOpened(false)}
-        title={<Title order={4}>Onay Kaldırma</Title>}
+        title={<Title order={4} c="etherea.7">Onay Kaldırma</Title>}
+        styles={{
+          header: {
+            backgroundColor: '#F9F6FF',
+          },
+          body: {
+            backgroundColor: '#F9F6FF',
+          }
+        }}
       >
-        <Text mb="md">
+        <Text mb="md" c="etherea.8">
           <b>{selectedTherapist?.full_name}</b> isimli psikoloğun onayını kaldırmak istediğinize emin misiniz?
         </Text>
         <Text size="sm" c="dimmed" mb="xl">
           Onay kaldırıldıktan sonra psikolog platformda hizmet veremeyecek.
         </Text>
         <Group justify="right">
-          <Button variant="default" onClick={() => setRejectOpened(false)} disabled={actionLoading}>
+          <Button 
+            variant="light" 
+            color="etherea.4" 
+            onClick={() => setRejectOpened(false)} 
+            disabled={actionLoading}
+          >
             İptal
           </Button>
           <Button

@@ -193,10 +193,10 @@ export default function Appointments() {
           <Table striped highlightOnHover>
             <thead>
               <tr>
-                <th>Kullanıcı</th>
-                <th>Psikolog</th>
-                <th>Tarih & Saat</th>
-                <th>Durum</th>
+                <th style={{ color: '#5E4B8B' }}>Kullanıcı</th>
+                <th style={{ color: '#5E4B8B' }}>Psikolog</th>
+                <th style={{ color: '#5E4B8B' }}>Tarih & Saat</th>
+                <th style={{ color: '#5E4B8B' }}>Durum</th>
                 <th style={{ width: 100 }} />
               </tr>
             </thead>
@@ -209,39 +209,47 @@ export default function Appointments() {
       <Modal
         opened={detailsOpened}
         onClose={() => setDetailsOpened(false)}
-        title={<Title order={4}>Randevu Detayları</Title>}
+        title={<Title order={4} c="etherea.7">Randevu Detayları</Title>}
+        styles={{
+          header: {
+            backgroundColor: '#F9F6FF',
+          },
+          body: {
+            backgroundColor: '#F9F6FF',
+          }
+        }}
       >
         {selectedAppointment && (
           <Stack>
             <div>
-              <Text weight={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Kullanıcı
               </Text>
-              <Text>{selectedAppointment.user_name}</Text>
+              <Text c="etherea.9">{selectedAppointment.user_name}</Text>
             </div>
 
             <div>
-              <Text weight={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Psikolog
               </Text>
-              <Text>{selectedAppointment.therapist_name}</Text>
+              <Text c="etherea.9">{selectedAppointment.therapist_name}</Text>
             </div>
 
             <div>
-              <Text weight={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Tarih ve Saat
               </Text>
-              <Text>
+              <Text c="etherea.9">
                 {new Date(selectedAppointment.appointment_date).toLocaleDateString('tr-TR')},{' '}
                 {selectedAppointment.start_time} - {selectedAppointment.end_time}
               </Text>
             </div>
 
             <div>
-              <Text weight={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Görüşme Tipi
               </Text>
-              <Text>
+              <Text c="etherea.9">
                 {selectedAppointment.session_type === 'online'
                   ? 'Online Görüşme'
                   : 'Yüz Yüze Görüşme'}
@@ -250,15 +258,15 @@ export default function Appointments() {
 
             {selectedAppointment.session_type === 'online' && selectedAppointment.session_link && (
               <div>
-                <Text weight={700} mb={5}>
+                <Text fw={700} mb={5} c="etherea.7">
                   Görüşme Linki
                 </Text>
-                <Text>{selectedAppointment.session_link}</Text>
+                <Text c="etherea.9">{selectedAppointment.session_link}</Text>
               </div>
             )}
 
             <div>
-              <Text weight={700} mb={5}>
+              <Text fw={700} mb={5} c="etherea.7">
                 Durum
               </Text>
               <Badge color={getStatusColor(selectedAppointment.status)} variant="light">
@@ -268,21 +276,22 @@ export default function Appointments() {
 
             {selectedAppointment.notes && (
               <div>
-                <Text weight={700} mb={5}>
+                <Text fw={700} mb={5} c="etherea.7">
                   Notlar
                 </Text>
-                <Text>{selectedAppointment.notes}</Text>
+                <Text c="etherea.9">{selectedAppointment.notes}</Text>
               </div>
             )}
 
             <Divider />
 
-            <Group position="right">
-              <Button variant="default" onClick={() => setDetailsOpened(false)}>
+            <Group justify="right">
+              <Button variant="light" color="etherea.4" onClick={() => setDetailsOpened(false)}>
                 Kapat
               </Button>
               <Button
                 color="etherea.4"
+                c="white"
                 onClick={() => {
                   setDetailsOpened(false);
                   setNewStatus(selectedAppointment.status);
@@ -300,12 +309,20 @@ export default function Appointments() {
       <Modal
         opened={statusModalOpened}
         onClose={() => setStatusModalOpened(false)}
-        title={<Title order={4}>Randevu Durumunu Değiştir</Title>}
+        title={<Title order={4} c="etherea.7">Randevu Durumunu Değiştir</Title>}
+        styles={{
+          header: {
+            backgroundColor: '#F9F6FF',
+          },
+          body: {
+            backgroundColor: '#F9F6FF',
+          }
+        }}
       >
         {selectedAppointment && (
           <Stack>
-            <Text>
-              <b>
+            <Text c="dimmed">
+              <b style={{ color: '#5E4B8B' }}>
                 {selectedAppointment.user_name} - {selectedAppointment.therapist_name}
               </b>{' '}
               randevusunun durumunu değiştir:
@@ -316,6 +333,32 @@ export default function Appointments() {
               placeholder="Durum seçin"
               value={newStatus}
               onChange={setNewStatus}
+              c="etherea.5"
+              comboboxProps={{ withinPortal: true }}
+              styles={{
+                input: {
+                  color: '#5E4B8B',
+                  borderColor: '#5E4B8B',
+                  backgroundColor: '#F9F6FF',
+                },
+                dropdown: {
+                  backgroundColor: '#F9F6FF',
+                },
+                option: {
+                  color: '#5E4B8B',
+                  backgroundColor: '#F9F6FF',
+                  '&:hover': {
+                    backgroundColor: '#E6DFF8',
+                  },
+                  '&[data-selected]': {
+                    backgroundColor: '#9A7BFF',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#8A6BEF',
+                    }
+                  }
+                }
+              }}
               data={[
                 { value: 'pending', label: 'Beklemede' },
                 { value: 'confirmed', label: 'Onaylandı' },
@@ -324,12 +367,13 @@ export default function Appointments() {
               ]}
             />
 
-            <Group position="right" mt="md">
-              <Button variant="default" onClick={() => setStatusModalOpened(false)} disabled={actionLoading}>
+            <Group justify="right" mt="md">
+              <Button variant="light" color="etherea.4" onClick={() => setStatusModalOpened(false)} disabled={actionLoading}>
                 İptal
               </Button>
               <Button
                 color="etherea.4"
+                c="white"
                 onClick={() => handleStatusChange(selectedAppointment.id, newStatus)}
                 loading={actionLoading}
               >

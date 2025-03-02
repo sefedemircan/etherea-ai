@@ -108,7 +108,7 @@ export default function Users() {
             {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
           </Avatar>
           <div>
-            <Text size="sm" fw={500}>
+            <Text c="etherea.5" size="sm" fw={500}>
               {user.name || 'İsimsiz Kullanıcı'}
             </Text>
             <Text size="xs" c="dimmed">
@@ -126,7 +126,7 @@ export default function Users() {
               ? 'blue'
               : 'green'
           }
-          variant="light"
+          variant="filled"
         >
           {user.role === 'admin'
             ? 'Admin'
@@ -191,11 +191,19 @@ export default function Users() {
         opened={roleModalOpened}
         onClose={() => setRoleModalOpened(false)}
         title={<Title order={4}>Kullanıcı Rolünü Değiştir</Title>}
+        styles={{
+          header: {
+            backgroundColor: '#F9F6FF',
+          },
+          body: {
+            backgroundColor: '#F9F6FF',
+          }
+        }}
       >
         {selectedUser && (
           <Stack>
-            <Text>
-              <b>{selectedUser.name || selectedUser.email}</b> kullanıcısının rolünü değiştir:
+            <Text c="dimmed">
+              <b style={{ color: '#5E4B8B' }}>{selectedUser.name || selectedUser.email}</b> kullanıcısının rolünü değiştir:
             </Text>
 
             <Select
@@ -203,6 +211,32 @@ export default function Users() {
               placeholder="Rol seçin"
               value={newRole}
               onChange={setNewRole}
+              c="etherea.5"
+              comboboxProps={{ withinPortal: true }}
+              styles={{
+                input: {
+                  color: '#5E4B8B',
+                  borderColor: '#5E4B8B',
+                  backgroundColor: '#F9F6FF',
+                },
+                dropdown: {
+                  backgroundColor: '#F9F6FF',
+                },
+                option: {
+                  color: '#5E4B8B',
+                  backgroundColor: '#F9F6FF',
+                  '&:hover': {
+                    backgroundColor: '#E6DFF8',
+                  },
+                  '&[data-selected]': {
+                    backgroundColor: '#9A7BFF',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#8A6BEF',
+                    }
+                  }
+                }
+              }}
               data={[
                 { value: 'user', label: 'Kullanıcı' },
                 { value: 'therapist', label: 'Psikolog' },
@@ -211,11 +245,12 @@ export default function Users() {
             />
 
             <Group justify="right" mt="md">
-              <Button variant="default" onClick={() => setRoleModalOpened(false)} disabled={actionLoading}>
+              <Button variant="light" onClick={() => setRoleModalOpened(false)} disabled={actionLoading}>
                 İptal
               </Button>
               <Button
                 color="etherea.4"
+                c="white"
                 onClick={() => handleRoleChange(selectedUser.id, newRole)}
                 loading={actionLoading}
               >
