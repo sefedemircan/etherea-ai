@@ -1,8 +1,35 @@
-# React + Vite
+# etherea-ai
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Genel Bakış
 
-Currently, two official plugins are available:
+Etherea, kullanıcıların ruh sağlığı ve kişisel gelişimlerini destekleyen, yapay zeka destekli bir dijital platform çözümüdür. Günlük tutma, duygu analizi, terapist desteği ve kişiselleştirilmiş öneriler sunarak kullanıcıların iyi oluş halini artırmayı hedefler.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Temel Özellikler
+
+- **Günlük Tutma**: Kullanıcılar duygularını ve düşüncelerini kaydedebilir
+- **Duygu Analizi**: Yapay zeka ile günlük girdilerinin duygusal analizi
+- **Terapist Bağlantısı**: Uzman terapistlerle çevrimiçi görüşme imkanı
+- **Kişiselleştirilmiş Öneriler**: Kullanıcının ihtiyaçlarına göre özelleştirilmiş tavsiyeler
+- **Güvenli Mesajlaşma**: Terapistlerle güvenli ve özel iletişim
+
+## Teknoloji Altyapısı
+
+Etherea, modern web teknolojileri kullanılarak geliştirilmiştir:
+
+- React ve Vite ile hızlı ve modern kullanıcı arayüzü
+- Mantine UI kütüphanesi ile estetik ve kullanıcı dostu tasarım
+- Supabase ile güvenli veritabanı ve kimlik doğrulama
+- OpenAI API entegrasyonu ile yapay zeka destekli analiz ve öneriler
+
+## Kurulum
+
+```bash
+# Bağımlılıkları yükleyin
+npm install
+
+# Geliştirme sunucusunu başlatın
+npm run dev
+
+# Üretime hazır sürüm oluşturun
+npm run build
+```
