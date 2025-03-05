@@ -127,7 +127,7 @@ function TherapistList() {
                 <Group>
                   <Avatar src={therapist.avatar_url} size="lg" radius="xl" />
                   <div>
-                    <Text fw={500}>{therapist.full_name}</Text>
+                    <Text c="dimmed" fw={500}>{therapist.full_name}</Text>
                     <Text size="sm" c="dimmed">{therapist.title}</Text>
                   </div>
                 </Group>
@@ -143,24 +143,24 @@ function TherapistList() {
 
               <Group spacing="xs" mb="xs">
                 {therapist.specializations.map((spec, index) => (
-                  <Badge key={index} variant="dot" color="etherea.4">
+                  <Badge key={index} variant="filled" color="etherea.4">
                     {spec}
                   </Badge>
                 ))}
               </Group>
 
-              <Text size="sm" lineClamp={3} mb="md">
+              <Text c="dimmed" size="sm" lineClamp={3} mb="md">
                 {therapist.about}
               </Text>
 
               <Group position="apart" mt="md">
                 <div>
                   <Text size="sm" c="dimmed">Deneyim</Text>
-                  <Text fw={500}>{therapist.experience_years} Yıl</Text>
+                  <Text c="etherea.4" fw={500}>{therapist.experience_years} Yıl</Text>
                 </div>
                 <div>
                   <Text size="sm" c="dimmed">Seans Ücreti</Text>
-                  <Text fw={500}>{therapist.session_fee} TL</Text>
+                  <Text c="etherea.4" fw={500}>{therapist.session_fee} TL</Text>
                 </div>
                 <div>
                   <Group spacing={4}>
