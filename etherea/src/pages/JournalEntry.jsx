@@ -17,6 +17,7 @@ function JournalEntry() {
   const [analysis, setAnalysis] = useState(null);
   const [existingEntry, setExistingEntry] = useState(null);
   const [activeTab, setActiveTab] = useState(location.state?.initialTab || 'text');
+  const [voiceAnalysis, setVoiceAnalysis] = useState(null);
 
   useEffect(() => {
     if (date) {
@@ -102,52 +103,61 @@ function JournalEntry() {
 
     setIsSaving(true);
     try {
-      const currentDate = date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-      const entryData = {
-        content,
-        date: currentDate,
-        mood: analysis?.mood || 3,
-        keywords: analysis?.keywords || [],
-        ai_summary: analysis?.summary || null,
-        ai_suggestions: analysis?.suggestions || []
-      };
-
-      let savedEntry;
-      if (existingEntry) {
-        savedEntry = await journalApi.updateEntry(existingEntry.id, entryData);
-      } else {
-        savedEntry = await journalApi.createEntry(entryData);
+      // Eğer analiz yapılmadıysa, otomatik olarak yap
+      let currentAnalysis = analysis;
+      if (!currentAnalysis) {
+        if (activeTab === 'voice' && voiceAnalysis) {
+          currentAnalysis = {
+            mood: voiceAnalysis.mood,
+            keywords: voiceAnalysis.keywords,
+            summary: voiceAnalysis.summary,
+            suggestions: voiceAnalysis.suggestions
+          };
+        } else {
+          const result = await aiApi.analyzeEntry(content);
+          currentAnalysis = result;
+        }
+        setAnalysis(currentAnalysis);
       }
 
-      // Eski önerileri temizle
-      await recommendationsApi.deleteOldRecommendations();
-
-      // Yeni öneriler oluştur
-      try {
-        await recommendationsApi.createRecommendations(
-          savedEntry.mood,
-          savedEntry.keywords || []
-        );
-
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (existingEntry) {
+        await journalApi.updateEntry({
+          id: existingEntry.id,
+          content,
+          mood: currentAnalysis.mood,
+          keywords: currentAnalysis.keywords,
+          ai_summary: currentAnalysis.summary,
+          ai_suggestions: currentAnalysis.suggestions
+        });
         notifications.show({
           title: 'Başarılı',
-          message: 'Günlük kaydedildi ve öneriler oluşturuldu',
+          message: 'Günlük güncellendi',
           color: 'green',
         });
-      } catch (error) {
-        console.error('Öneriler oluşturulurken hata:', error);
+      } else {
+        await journalApi.createEntry({
+          content,
+          mood: currentAnalysis.mood,
+          date: today,
+          keywords: currentAnalysis.keywords,
+          ai_summary: currentAnalysis.summary,
+          ai_suggestions: currentAnalysis.suggestions
+        });
         notifications.show({
-          title: 'Uyarı',
-          message: 'Günlük kaydedildi fakat öneriler oluşturulamadı',
-          color: 'yellow',
+          title: 'Başarılı',
+          message: 'Günlük kaydedildi',
+          color: 'green',
         });
       }
-
-      navigate('/recommendations');
+      
+      navigate('/');
     } catch (error) {
+      console.error('Günlük kaydedilirken hata:', error);
       notifications.show({
         title: 'Hata',
-        message: 'Günlük kaydedilemedi',
+        message: 'Günlük kaydedilirken bir hata oluştu',
         color: 'red',
       });
     } finally {
@@ -155,136 +165,112 @@ function JournalEntry() {
     }
   };
 
-  const handleVoiceTranscription = (transcription) => {
-    setContent(prev => prev ? `${prev}\n\n${transcription}` : transcription);
+  const handleVoiceTranscription = (transcript) => {
+    setContent(transcript);
+  };
+
+  const handleVoiceAnalysis = (analysisResult) => {
+    setVoiceAnalysis(analysisResult);
+    // Ses analizinden gelen duygu durumu ve anahtar kelimeleri kullanarak analiz nesnesini güncelle
+    setAnalysis({
+      mood: analysisResult.mood,
+      keywords: analysisResult.keywords,
+      summary: analysisResult.summary,
+      suggestions: analysisResult.suggestions
+    });
   };
 
   return (
-    <Stack spacing="lg">
-      <Paper shadow="sm" p="md" radius="md" pos="relative">
-        <LoadingOverlay visible={isSaving} overlayProps={{ blur: 2 }} />
-        <Title order={4} mb="md">
-          {date ? `${date} Tarihli Günlük` : 'Yeni Günlük Girdisi'}
-        </Title>
+    <Stack spacing="md">
+      <Title order={2}>Günlük Girişi</Title>
+      
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tabs.List>
+          <Tabs.Tab c={activeTab === 'text' ? 'etherea.4' : 'dimmed'} bg={activeTab === 'text' ? 'etherea.1' : 'etherea.1'} value="text" leftSection={<IconKeyboard size={16} />}>
+            Yazı
+          </Tabs.Tab>
+          <Tabs.Tab c={activeTab === 'voice' ? 'etherea.4' : 'dimmed'} bg={activeTab === 'voice' ? 'etherea.1' : 'etherea.1'} value="voice" leftSection={<IconMicrophone size={16} />}>
+            Ses
+          </Tabs.Tab>
+        </Tabs.List>
 
-        <Tabs variant='pills' value={activeTab} onChange={setActiveTab} mb="md">
-          <Tabs.List>
-            <Tabs.Tab
-              bg={activeTab === 'text' ? 'etherea.2' : 'transparent'}
-              c="etherea.5"
-              value="text"
-              leftSection={<IconKeyboard size={16} />}
-            >
-              Yazı
-            </Tabs.Tab>
-            <Tabs.Tab
-              bg={activeTab === 'voice' ? 'etherea.2' : 'transparent'}
-              value="voice"
-              c="etherea.5"
-              leftSection={<IconMicrophone size={16} />}
-            >
-              Ses
-            </Tabs.Tab>
-          </Tabs.List>
-
-          <Tabs.Panel value="text" pt="xs">
+        <Tabs.Panel value="text" pt="md">
+          <Paper shadow="sm" p="md" radius="md" pos="relative">
+            <LoadingOverlay visible={isSaving} overlayBlur={2} />
             <Textarea
-              placeholder="Bugün nasıl hissediyorsun?"
+              placeholder="Bugün nasıl hissettiğini yaz..."
               minRows={10}
               autosize
               value={content}
-              onChange={(event) => setContent(event.currentTarget.value)}
-              styles={{
-                input: {
-                  backgroundColor: '#F9F6FF',
-                  color: '#5E4B8B',
-                  border: '1px solid #E2D8FF',
-                  '&:focus': {
-                    borderColor: '#9A7BFF',
-                  },
-                  '&::placeholder': {
-                    color: '#9A7BFF',
-                  },
-                },
-              }}
+              onChange={(e) => setContent(e.target.value)}
             />
-          </Tabs.Panel>
+            <Group justify="flex-end" mt="md">
+              <Button
+                leftSection={<IconBrain size={20} />}
+                onClick={handleAnalyze}
+                loading={isAnalyzing}
+                variant="light"
+                color="etherea.4"
+              >
+                Analiz Et
+              </Button>
+              <Button
+                leftSection={<IconSend size={20} />}
+                onClick={handleSubmit}
+                loading={isSaving}
+              >
+                Kaydet
+              </Button>
+            </Group>
+          </Paper>
+        </Tabs.Panel>
 
-          <Tabs.Panel value="voice" pt="xs">
-            <VoiceRecorder onTranscriptionComplete={handleVoiceTranscription} />
-            {content && (
-              <Paper shadow="xs" p="sm" radius="md" bg="etherea.1" mt="md">
-                <Text fw={500} size="sm" c="etherea.7" mb="xs">Kaydedilen Metin:</Text>
-                <Text c="etherea.6">{content}</Text>
-              </Paper>
-            )}
-          </Tabs.Panel>
-        </Tabs>
-
-        <Group mt="md" justify="space-between">
-          <Button
-            leftSection={<IconBrain size={20} />}
-            variant="light"
-            onClick={handleAnalyze}
-            loading={isAnalyzing}
-          >
-            AI ile Analiz Et
-          </Button>
-          <Button
-            leftSection={<IconSend size={20} />}
-            onClick={handleSubmit}
-            loading={isSaving}
-            disabled={!content.trim()}
-            bg="etherea.3"
-            c="etherea.5"
-          >
-            Kaydet
-          </Button>
-        </Group>
-      </Paper>
+        <Tabs.Panel value="voice" pt="md">
+          <VoiceRecorder 
+            onTranscriptionComplete={handleVoiceTranscription} 
+            onAnalysisComplete={handleVoiceAnalysis}
+          />
+          
+          {content && (
+            <Paper shadow="sm" p="md" radius="md" mt="md" pos="relative">
+              <LoadingOverlay visible={isSaving} overlayBlur={2} />
+              <Title order={4} mb="md">Metin Dökümü</Title>
+              <Text c="dimmed">{content}</Text>
+              <Group justify="flex-end" mt="md">
+                <Button
+                  c="etherea.4"
+                  bg="etherea.1"
+                  leftSection={<IconSend size={20} />}
+                  onClick={handleSubmit}
+                  loading={isSaving}
+                >
+                  Kaydet
+                </Button>
+              </Group>
+            </Paper>
+          )}
+        </Tabs.Panel>
+      </Tabs>
 
       {analysis && (
         <Paper shadow="sm" p="md" radius="md">
-          <Title c="etherea.6" order={4} mb="md">AI Analizi</Title>
-          <Stack spacing="md">
-            <Group>
-              <Text fw={500} c="etherea.5">Duygu Durumu:</Text>
-              <Text c="#5E4B8B">{['Çok Kötü', 'Kötü', 'Normal', 'İyi', 'Çok İyi'][analysis.mood - 1]}</Text>
-            </Group>
-            
-            <div>
-              <Text fw={500} c="etherea.5" mb="xs">Anahtar Kelimeler:</Text>
-              <Group gap="xs">
-                {analysis.keywords.map((keyword, index) => (
-                  <Text
-                    key={index}
-                    size="sm"
-                    px="xs"
-                    py={4}
-                    bg="etherea.1"
-                    c="etherea.5"
-                    style={{ borderRadius: '4px' }}
-                  >
-                    {keyword}
-                  </Text>
-                ))}
-              </Group>
-            </div>
-
-            <div>
-              <Text fw={500} c="etherea.5" mb="xs">Özet:</Text>
-              <Text size="sm" c="etherea.6">{analysis.summary}</Text>
-            </div>
-
-            <div>
-              <Text fw={500} c="etherea.5" mb="xs">Öneriler:</Text>
-              {analysis.suggestions.map((suggestion, index) => (
-                <Text key={index} size="sm" c="etherea.6" mb="xs">
-                  • {suggestion}
-                </Text>
-              ))}
-            </div>
-          </Stack>
+          <Title order={4} mb="md">Analiz Sonuçları</Title>
+          
+          <Text c="dimmed" fw={600}>Duygu Durumu:</Text>
+          <Text c="dimmed" fw={400} mb="md">{analysis.mood}/5</Text>
+          
+          <Text c="dimmed" fw={600}>Anahtar Kelimeler:</Text>
+          <Text c="dimmed" fw={400} mb="md">{analysis.keywords.join(', ')}</Text>
+          
+          <Text c="dimmed" fw={600}>Özet:</Text>
+          <Text c="dimmed" fw={400} mb="md">{analysis.summary}</Text>
+          
+          <Text c="dimmed" fw={600}>Öneriler:</Text>
+          <ul style={{ color: '#828282' }}>
+            {analysis.suggestions.map((suggestion, index) => (
+              <li key={index}>{suggestion}</li>
+            ))}
+          </ul>
         </Paper>
       )}
     </Stack>

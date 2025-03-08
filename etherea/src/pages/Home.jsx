@@ -183,12 +183,12 @@ function Home() {
           <Paper shadow="sm" p="md" radius="md">
             <Title order={4} mb="md">Takvim</Title>
             <Calendar
-              fullWidth
+              fullwidth="true"
               getDayProps={getDayProps}
-              onDateClick={handleDateClick}
+              onClick={handleDateClick}
               styles={{
                 day: {
-                  '&[data-selected]': {
+                  '&[dataSelected]': {
                     backgroundColor: 'var(--mantine-color-etherea-4)',
                     color: 'var(--mantine-color-white)',
                   },

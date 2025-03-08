@@ -11,7 +11,7 @@ body {
 }
 
 /* Disabled buton stilleri */
-.mantine-Button-root[data-disabled="true"],
+.mantine-Button-root[dataDisabled="true"],
 .mantine-Button-root:disabled {
   background-color: #F0EBFF !important;
   color: #C5B3FF !important;
@@ -42,20 +42,20 @@ body {
   background-color: #E2D8FF !important;
 }
 
-.mantine-Calendar-day[data-selected] {
+.mantine-Calendar-day[dataSelected] {
   background-color: #9A7BFF !important;
   color: #F9F6FF !important;
 }
 
-.mantine-Calendar-day[data-selected]:hover {
+.mantine-Calendar-day[dataSelected]:hover {
   background-color: #7D5EFF !important;
 }
 
-.mantine-Calendar-day[data-weekend] {
+.mantine-Calendar-day[dataWeekend] {
   color: #9A7BFF !important;
 }
 
-.mantine-Calendar-day[data-outside] {
+.mantine-Calendar-day[dataOutside] {
   color: #C5B3FF !important;
 }
 

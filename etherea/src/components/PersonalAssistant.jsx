@@ -251,8 +251,8 @@ function PersonalAssistant() {
               item: {
                 backgroundColor: 'var(--mantine-color-etherea-0)',
                 border: '1px solid var(--mantine-color-etherea-2)',
-                marginBottom: '2px',
-                '&[data-active]': {
+                marginBottom: '8px',
+                '&[dataActive]': {
                   backgroundColor: 'var(--mantine-color-etherea-0)'
                 }
               },

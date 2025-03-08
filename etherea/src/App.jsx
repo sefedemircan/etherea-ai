@@ -80,7 +80,14 @@ const theme = createTheme({
           '&:hover': {
             backgroundColor: '#FFD8BE',
           },
-          '&:disabled, &[data-disabled=true]': {
+          '&:disabled': {
+            backgroundColor: '#F0EBFF !important',
+            color: '#C5B3FF !important',
+            opacity: 0.7,
+            border: '1px solid #E2D8FF',
+            pointerEvents: 'none'
+          },
+          '&[dataDisabled=true]': {
             backgroundColor: '#F0EBFF !important',
             color: '#C5B3FF !important',
             opacity: 0.7,
