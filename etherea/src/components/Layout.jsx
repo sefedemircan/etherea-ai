@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { AppShell, Burger, Group, NavLink, Title, Box, Button, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconHome, IconPencil, IconChartLine, IconBulb, IconLogout, IconNotebook, IconMessage, IconUsers } from '@tabler/icons-react';
+import { IconHome, IconPencil, IconChartLine, IconBulb, IconLogout, IconNotebook, IconMessage, IconUsers, IconHeartHandshake } from '@tabler/icons-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { notifications } from '@mantine/notifications';
@@ -18,6 +18,7 @@ function Layout() {
     { icon: IconNotebook, label: 'Günlüklerim', path: '/journals' },
     { icon: IconChartLine, label: 'Analizler', path: '/analysis' },
     { icon: IconBulb, label: 'Öneriler', path: '/recommendations' },
+    { icon: IconHeartHandshake, label: 'Kişisel Asistan', path: '/assistant' },
     { icon: IconUsers, label: 'Psikologlar', path: '/therapists' },
     { icon: IconMessage, label: 'Mesajlar', path: '/messages' },
   ];

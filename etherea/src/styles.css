@@ -10,6 +10,28 @@ body {
   background-color: #F9F6FF;
 }
 
+/* Disabled buton stilleri */
+.mantine-Button-root[data-disabled="true"],
+.mantine-Button-root:disabled {
+  background-color: #F0EBFF !important;
+  color: #C5B3FF !important;
+  opacity: 0.8 !important;
+  border: 1px solid #E2D8FF !important;
+}
+
+/* Gönder butonu özel stili */
+.send-button {
+  background-color: #9A7BFF !important;
+  color: #F9F6FF !important;
+}
+
+.send-button:disabled {
+  background-color: #F0EBFF !important;
+  color: #C5B3FF !important;
+  opacity: 0.8 !important;
+  border: 1px solid #E2D8FF !important;
+}
+
 /* Mantine Calendar özelleştirmeleri */
 .mantine-Calendar-day {
   background-color: #F9F6FF !important;

@@ -14,6 +14,7 @@ import TherapistSignUp from './auth/TherapistSignUp';
 import TherapistProfile from './therapist/Profile';
 import TherapistMessages from './therapist/Messages';
 import { useAuth } from '../contexts/AuthContext';
+import PersonalAssistantPage from './PersonalAssistantPage';
 
 // Admin sayfaları
 import AdminDashboard from './admin/Dashboard';
@@ -65,6 +66,7 @@ function AppRoutes() {
         <Route path="/recommendations" element={<Recommendations />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/therapists" element={<TherapistList />} />
+        <Route path="/assistant" element={<PersonalAssistantPage />} />
 
         {/* Psikolog sayfaları */}
         <Route path="/therapist/profile" element={<TherapistProfile />} />

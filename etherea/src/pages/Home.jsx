@@ -4,6 +4,7 @@ import { Paper, Group, Button, Stack, Title, Text, Grid, RingProgress, ActionIco
 import { Calendar } from '@mantine/dates';
 import { IconPencil, IconMicrophone, IconUpload } from '@tabler/icons-react';
 import { journalApi } from '../services/supabase';
+import PersonalAssistant from '../components/PersonalAssistant';
 
 function MoodWidget() {
   const [mood, setMood] = useState(5);
@@ -98,181 +99,105 @@ function Home() {
   };
 
   const getDayProps = (date) => {
-    // Tarihi UTC'ye çevirip sadece YYYY-MM-DD kısmını alıyoruz
-    const utcDate = new Date(Date.UTC(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    ));
-    const dateStr = utcDate.toISOString().split('T')[0];
-    const entry = entries.find(e => e.date === dateStr);
+    const formattedDate = date.toISOString().split('T')[0];
+    const entry = entries.find(e => e.date === formattedDate);
     
-    if (!entry) return {};
-
-    // Duygu durumuna göre renk belirleme
-    let style = {
-      backgroundColor: '#F9F6FF',
-      position: 'relative'
-    };
-
-    if (entry.mood >= 4) {
-      style.backgroundColor = 'rgba(154, 123, 255, 0.3)'; // Pozitif
-    } else if (entry.mood === 3) {
-      style.backgroundColor = 'rgba(181, 230, 246, 0.3)'; // Nötr
-    } else {
-      style.backgroundColor = 'rgba(255, 216, 190, 0.3)'; // Negatif
+    if (entry) {
+      let color;
+      if (entry.mood >= 4) color = 'green';
+      else if (entry.mood === 3) color = 'blue';
+      else color = 'red';
+      
+      return {
+        bg: `${color}.1`,
+        style: { color: `var(--mantine-color-${color}-filled)` }
+      };
     }
-
-    return {
-      style,
-      onClick: () => {
-        setSelectedDate(date);
-        // Modal veya yan panel açarak günlüğü göster
-        setShowEntryModal(true);
-        setSelectedEntry(entry);
-      },
-      "data-has-entry": "true"
-    };
+    
+    return {};
   };
 
-  const [showEntryModal, setShowEntryModal] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState(null);
+  const handleDateClick = (date) => {
+    const formattedDate = date.toISOString().split('T')[0];
+    const entry = entries.find(e => e.date === formattedDate);
+    
+    if (entry) {
+      navigate(`/entry/${formattedDate}`);
+    } else {
+      setSelectedDate(date);
+      handleNewEntry('text');
+    }
+  };
 
   return (
     <Stack spacing="lg">
+      <Title order={2}>Merhaba!</Title>
+      
       <Grid>
         <Grid.Col span={{ base: 12, md: 8 }}>
-          <MoodWidget />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <QuickActions onNewEntry={handleNewEntry} />
-        </Grid.Col>
-      </Grid>
-
-      <Grid>
-        <Grid.Col span={{ base: 12, md: 8 }}>
-          <Paper shadow="sm" p="md" radius="md">
-            <Group position="apart" mb="md">
-              <Title order={4}>Takvim</Title>
-              <Group spacing="xs">
-                <Badge style={{border: 'transparent'}} bg="etherea.4" color="etherea.6" variant="dot">Pozitif</Badge>
-                <Badge style={{border: 'transparent'}} bg="serenity.4" color="serenity.6" variant="dot">Nötr</Badge>
-                <Badge style={{border: 'transparent'}} bg="warmth.6" color="warmth.3" variant="dot">Negatif</Badge>
+          <Stack spacing="md">
+            <PersonalAssistant />
+            
+            <MoodWidget />
+            
+            <QuickActions onNewEntry={handleNewEntry} />
+            
+            <Paper shadow="sm" p="md" radius="md">
+              <Title order={4} mb="md">Duygu Durumu Özeti</Title>
+              <Group justify="center" align="center">
+                <RingProgress
+                  size={150}
+                  thickness={16}
+                  roundCaps
+                  sections={[
+                    { value: moodStats.positive, color: 'green' },
+                    { value: moodStats.neutral, color: 'blue' },
+                    { value: moodStats.negative, color: 'red' }
+                  ]}
+                  label={
+                    <Text ta="center" size="sm" fw={500}>
+                      {entries.length} Günlük
+                    </Text>
+                  }
+                />
+                <Stack spacing={5}>
+                  <Group gap="xs">
+                    <Badge color="green">Olumlu</Badge>
+                    <Text size="sm">{Math.round(moodStats.positive)}%</Text>
+                  </Group>
+                  <Group gap="xs">
+                    <Badge color="blue">Nötr</Badge>
+                    <Text size="sm">{Math.round(moodStats.neutral)}%</Text>
+                  </Group>
+                  <Group gap="xs">
+                    <Badge color="red">Olumsuz</Badge>
+                    <Text size="sm">{Math.round(moodStats.negative)}%</Text>
+                  </Group>
+                </Stack>
               </Group>
-            </Group>
+            </Paper>
+          </Stack>
+        </Grid.Col>
+        
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Paper shadow="sm" p="md" radius="md">
+            <Title order={4} mb="md">Takvim</Title>
             <Calendar
-              size="lg"
-              value={selectedDate}
-              onChange={setSelectedDate}
+              fullWidth
               getDayProps={getDayProps}
+              onDateClick={handleDateClick}
               styles={{
                 day: {
-                  '&[data-has-entry]': {
-                    cursor: 'pointer',
-                  }
-                }
+                  '&[data-selected]': {
+                    backgroundColor: 'var(--mantine-color-etherea-4)',
+                    color: 'var(--mantine-color-white)',
+                  },
+                },
               }}
             />
           </Paper>
         </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <Paper shadow="sm" p="md" radius="md">
-            <Title order={4} mb="md">Aylık Özet</Title>
-            <Group justify="center">
-              <RingProgress
-                size={150}
-                thickness={12}
-                sections={[
-                  { value: moodStats.positive, color: 'etherea.4' },
-                  { value: moodStats.neutral, color: 'serenity.4' },
-                  { value: moodStats.negative, color: 'warmth.6' },
-                ]}
-                label={
-                  <Text ta="center" size="sm" c="etherea.6">
-                    30 Günlük<br />Duygu Dağılımı
-                  </Text>
-                }
-              />
-            </Group>
-          </Paper>
-        </Grid.Col>
       </Grid>
-
-      {/* Günlük Detay Modalı */}
-      {showEntryModal && selectedEntry && (
-        <Modal
-          opened={showEntryModal}
-          onClose={() => {
-            setShowEntryModal(false);
-            setSelectedEntry(null);
-          }}
-          title={
-            <Group>
-              <Text fw={500} c="etherea.7">
-                {new Date(selectedEntry.date).toLocaleDateString('tr-TR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </Text>
-              <Badge 
-                variant="light" 
-                color={selectedEntry.mood >= 4 ? 'etherea.4' : selectedEntry.mood === 3 ? 'serenity.3' : 'warmth.3'}
-              >
-                {['Çok Kötü', 'Kötü', 'Normal', 'İyi', 'Çok İyi'][selectedEntry.mood - 1]}
-              </Badge>
-            </Group>
-          }
-          size="lg"
-          styles={{
-            header: {
-              backgroundColor: '#F9F6FF',
-              borderBottom: '1px solid #E2D8FF',
-            },
-            close: {
-              color: '#5E4B8B',
-              '&:hover': {
-                backgroundColor: '#E2D8FF'
-              }
-            }
-          }}
-        >
-          <Stack spacing="md">
-            <Text mt={20} c="etherea.5">{selectedEntry.content}</Text>
-            
-            {selectedEntry.keywords && selectedEntry.keywords.length > 0 && (
-              <div>
-                <Text fw={500} size="sm" c="etherea.8" mb="xs">Anahtar Kelimeler:</Text>
-                <Group gap="xs">
-                  {selectedEntry.keywords.map((keyword, index) => (
-                    <Badge style={{border: 'transparent'}} key={index} bg="etherea.6" variant="dot" color="etherea.4">
-                      {keyword}
-                    </Badge>
-                  ))}
-                </Group>
-              </div>
-            )}
-
-            {selectedEntry.ai_summary && (
-              <div>
-                <Text fw={500} size="sm" c="etherea.8" mb="xs">AI Özeti:</Text>
-                <Text c="etherea.6" size="sm">{selectedEntry.ai_summary}</Text>
-              </div>
-            )}
-
-            <Group position="right">
-              <Button 
-                variant="light" 
-                color="etherea.4"
-                onClick={() => navigate(`/entry/${selectedEntry.date}`)}
-                leftSection={<IconPencil size={16} />}
-              >
-                Düzenle
-              </Button>
-            </Group>
-          </Stack>
-        </Modal>
-      )}
     </Stack>
   );
 }

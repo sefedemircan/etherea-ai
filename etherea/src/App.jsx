@@ -71,6 +71,7 @@ const theme = createTheme({
     Button: {
       defaultProps: {
         color: 'warmth.3',
+        variant: 'light',
       },
       styles: {
         root: {
@@ -79,6 +80,13 @@ const theme = createTheme({
           '&:hover': {
             backgroundColor: '#FFD8BE',
           },
+          '&:disabled, &[data-disabled=true]': {
+            backgroundColor: '#F0EBFF !important',
+            color: '#C5B3FF !important',
+            opacity: 0.7,
+            border: '1px solid #E2D8FF',
+            pointerEvents: 'none'
+          }
         },
       },
     },
@@ -91,6 +99,21 @@ const theme = createTheme({
           '&:hover': {
             backgroundColor: '#E2D8FF',
           },
+        },
+      },
+    },
+    Accordion: {
+      styles: {
+        control: {
+          '&:hover': {
+            backgroundColor: '#F9F6FF !important',
+          },
+        },
+        item: {
+          borderBottom: '1px solid #E2D8FF',
+        },
+        chevron: {
+          color: '#9A7BFF',
         },
       },
     },

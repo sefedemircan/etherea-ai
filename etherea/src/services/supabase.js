@@ -95,14 +95,15 @@ export const journalApi = {
     return data[0];
   },
 
-  async getEntries() {
+  async getEntries(limit = 100) {
     const { data: { user } } = await supabase.auth.getUser();
     
     const { data, error } = await supabase
       .from('journal_entries')
       .select('*')
       .eq('user_id', user.id)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .limit(limit);
 
     if (error) throw error;
     return data;
@@ -111,41 +112,28 @@ export const journalApi = {
   async getEntryByDate(date) {
     const { data: { user } } = await supabase.auth.getUser();
     
-    // Tarih formatını sıkı bir şekilde kontrol ediyoruz
-    let formattedDate;
-    try {
-      // Önce geçerli bir tarih olduğundan emin oluyoruz
-      const parsedDate = new Date(date);
-      if (isNaN(parsedDate.getTime())) {
-        throw new Error('Geçersiz tarih formatı');
-      }
-      
-      // UTC'ye çevirip YYYY-MM-DD formatına getiriyoruz
-      formattedDate = new Date(Date.UTC(
-        parsedDate.getFullYear(),
-        parsedDate.getMonth(),
-        parsedDate.getDate()
-      )).toISOString().split('T')[0];
-    } catch (error) {
-      console.error('Tarih formatı hatası:', error);
-      throw new Error('Geçersiz tarih formatı');
-    }
-    
     const { data, error } = await supabase
       .from('journal_entries')
       .select('*')
       .eq('user_id', user.id)
-      .eq('date', formattedDate)
+      .eq('date', date)
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
 
-  async updateEntry(id, updates) {
+  async updateEntry({ id, content, mood, keywords, ai_summary, ai_suggestions }) {
     const { data, error } = await supabase
       .from('journal_entries')
-      .update(updates)
+      .update({
+        content,
+        mood,
+        keywords,
+        ai_summary,
+        ai_suggestions,
+        updated_at: new Date()
+      })
       .eq('id', id)
       .select();
 
@@ -161,6 +149,36 @@ export const journalApi = {
 
     if (error) throw error;
   },
+  
+  async getUserProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('Kullanıcı oturumu bulunamadı');
+    
+    // Profil bilgilerini al
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (error) {
+      console.error('Profil bilgileri alınırken hata:', error);
+      // Profil bulunamadıysa temel kullanıcı bilgilerini döndür
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.name || user.email.split('@')[0],
+        avatar_url: user.user_metadata?.avatar_url || null,
+        created_at: user.created_at
+      };
+    }
+    
+    return {
+      ...profile,
+      email: user.email
+    };
+  }
 };
 
 // Analiz işlemleri
