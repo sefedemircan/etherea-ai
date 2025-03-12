@@ -104,7 +104,7 @@ export default function SignIn() {
               placeholder="******"
             />
 
-            <Button color="warmth.6" c="white" type="submit" loading={loading}>
+            <Button c="white" bg="warmth.6" type="submit" loading={loading}>
               Giriş Yap
             </Button>
           </Stack>
