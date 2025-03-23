@@ -45,21 +45,18 @@ export default function Appointments() {
 
   // userRole değiştiğinde randevuları yükle
   useEffect(() => {
-    console.log('Kullanıcı rolü:', userRole);
     loadAppointments();
   }, [userRole]);
 
   async function loadAppointments() {
     setLoading(true);
     try {
-      console.log('Randevular yükleniyor, terapist mi:', isTherapist);
       let data;
       if (isTherapist) {
         data = await appointmentApi.getTherapistAppointments();
       } else {
         data = await appointmentApi.getUserAppointments();
       }
-      console.log('Yüklenen randevular:', data);
       setAppointments(data);
     } catch (error) {
       console.error('Randevular yüklenirken hata oluştu:', error);
