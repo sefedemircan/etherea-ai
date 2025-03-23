@@ -206,7 +206,7 @@ export default function Appointments() {
     <>
       <Group position="apart" mb="lg">
         <Title order={2}>Randevularım</Title>
-        <Button onClick={open}>
+        <Button c="etherea.5" bg="etherea.1" onClick={open}>
           <IconCalendarPlus size={16} style={{ marginRight: '8px' }} />
           Yeni Randevu Oluştur
         </Button>
@@ -332,11 +332,13 @@ export default function Appointments() {
           </Grid>
 
           <Group position="right" mt="md">
-            <Button variant="outline" onClick={close}>
+            <Button variant="filled" c="white" bg="red" onClick={close}>
               <IconX size={16} style={{ marginRight: '8px' }} />
               İptal
             </Button>
             <Button 
+              c="etherea.5"
+              bg="etherea.2"
               onClick={handleCreateAppointment} 
               disabled={
                 !newAppointment.therapist_id ||

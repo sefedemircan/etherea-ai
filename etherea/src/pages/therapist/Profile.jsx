@@ -241,7 +241,8 @@ function Profile() {
           </Group>
           <Button
             leftSection={<IconEdit size={20} />}
-            variant="light"
+            bg="etherea.2"
+            c="etherea.5"
             onClick={() => setEditModalOpen(true)}
           >
             Profili Düzenle
