@@ -30,8 +30,8 @@ function Layout() {
       notifications.show({
         title: 'Başarılı',
         message: 'Çıkış yapıldı',
-        color: 'white',
-        bg: 'etherea.7',
+        
+        color: 'green'
       });
       navigate('/auth/signin');
     } catch (error) {

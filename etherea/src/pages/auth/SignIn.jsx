@@ -55,8 +55,7 @@ export default function SignIn() {
         notifications.show({
           title: 'Başarılı',
           message: 'Hoş geldiniz!',
-          color: 'white',
-          bg: 'etherea.7',
+          color: 'green'
         });
 
         // Kullanıcı rolüne göre yönlendirme yap
