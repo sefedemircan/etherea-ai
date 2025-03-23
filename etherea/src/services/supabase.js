@@ -740,4 +740,467 @@ export const adminApi = {
     if (error) throw error;
     return data.value;
   },
-}; 
+};
+
+// Kullanıcı Randevu API'si
+export const appointmentApi = {
+  // Kullanıcının randevularını getir
+  async getUserAppointments() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Kullanıcının randevularını getir
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('appointment_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Terapist bilgilerini getir
+      const therapistIds = [...new Set(appointments.map(a => a.therapist_id))];
+      
+      const { data: therapists, error: therapistsError } = await supabase
+        .from('therapist_profiles')
+        .select('id, full_name, specializations')
+        .in('id', therapistIds);
+
+      if (therapistsError) throw therapistsError;
+
+      // Verileri birleştir
+      return appointments.map(appointment => {
+        const therapist = therapists.find(t => t.id === appointment.therapist_id) || {};
+        return {
+          ...appointment,
+          therapist_name: therapist.full_name || 'İsimsiz Terapist',
+          therapist_specialization: therapist.specializations
+        };
+      });
+    } catch (error) {
+      console.error('Randevular alınırken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Tüm aktif terapistleri getir (user interface için)
+  async getAllTherapists() {
+    try {
+      const { data, error } = await supabase
+        .from('therapist_profiles')
+        .select('id, full_name, specializations, title, is_active, is_verified')
+        .eq('is_active', true)
+        .eq('is_verified', true);
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Terapist listesi alınırken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Terapist için randevuları getir
+  async getTherapistAppointments() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Kullanıcının terapist olup olmadığını kontrol et
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (roleError) throw roleError;
+      if (userRole.role !== 'therapist') throw new Error('Bu işlem için terapist olmanız gerekiyor');
+
+      // Terapistin randevularını getir
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('therapist_id', user.id)
+        .order('appointment_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Kullanıcı bilgilerini getir
+      const userIds = [...new Set(appointments.map(a => a.user_id))];
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Verileri birleştir
+      return appointments.map(appointment => {
+        const profile = profiles.find(p => p.id === appointment.user_id) || {};
+        return {
+          ...appointment,
+          user_name: profile.name || 'İsimsiz Kullanıcı',
+          user_avatar: profile.avatar_url
+        };
+      });
+    } catch (error) {
+      console.error('Terapist randevuları alınırken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Yeni randevu oluştur
+  async createAppointment(appointmentData) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert({
+          user_id: user.id,
+          therapist_id: appointmentData.therapist_id,
+          appointment_date: appointmentData.appointment_date,
+          start_time: appointmentData.start_time,
+          end_time: appointmentData.end_time,
+          session_type: appointmentData.session_type || 'online',
+          notes: appointmentData.notes,
+          status: 'pending'
+        })
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Randevu oluşturulurken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Randevu durumunu güncelle (kullanıcı)
+  async updateAppointmentStatus(appointmentId, status) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Randevunun kullanıcıya ait olup olmadığını kontrol et
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('user_id')
+        .eq('id', appointmentId)
+        .single();
+
+      if (appointmentError) throw appointmentError;
+      if (appointment.user_id !== user.id) throw new Error('Bu randevuyu güncelleme yetkiniz bulunmamaktadır');
+
+      // Randevu durumunu güncelle
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ status })
+        .eq('id', appointmentId)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Randevu durumu güncellenirken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Terapist randevu durumunu güncelle
+  async therapistUpdateAppointment(appointmentId, updateData) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Kullanıcının terapist olup olmadığını kontrol et
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (roleError) throw roleError;
+      if (userRole.role !== 'therapist') throw new Error('Bu işlem için terapist olmanız gerekiyor');
+
+      // Randevunun terapiste ait olup olmadığını kontrol et
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('therapist_id')
+        .eq('id', appointmentId)
+        .single();
+
+      if (appointmentError) throw appointmentError;
+      if (appointment.therapist_id !== user.id) throw new Error('Bu randevuyu güncelleme yetkiniz bulunmamaktadır');
+
+      // Randevuyu güncelle
+      const { data, error } = await supabase
+        .from('appointments')
+        .update(updateData)
+        .eq('id', appointmentId)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Terapist randevu güncellemesinde hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Kullanıcı için randevu iptal etme
+  async cancelAppointment(appointmentId, reason) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Randevunun kullanıcıya ait olup olmadığını kontrol et
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('user_id, status')
+        .eq('id', appointmentId)
+        .single();
+
+      if (appointmentError) throw appointmentError;
+      if (appointment.user_id !== user.id) throw new Error('Bu randevuyu iptal etme yetkiniz bulunmamaktadır');
+      
+      // Onaylanmış randevular sadece belirli bir süre öncesine kadar iptal edilebilir
+      if (appointment.status === 'confirmed') {
+        // Randevu tarihini kontrol et
+        const appointmentDate = new Date(appointment.appointment_date);
+        const now = new Date();
+        const hoursDifference = (appointmentDate - now) / (1000 * 60 * 60);
+        
+        if (hoursDifference < 24) {
+          throw new Error('Onaylanmış randevular en az 24 saat öncesinden iptal edilebilir');
+        }
+      }
+
+      // Randevuyu iptal et
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'cancelled',
+          notes: reason || 'Kullanıcı tarafından iptal edildi'
+        })
+        .eq('id', appointmentId)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Randevu iptal edilirken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Terapist için boş saatleri getir
+  async getTherapistAvailability(therapistId, date) {
+    try {
+      // Terapistin o günkü randevularını getir
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select('start_time, end_time')
+        .eq('therapist_id', therapistId)
+        .eq('appointment_date', date)
+        .in('status', ['confirmed', 'pending']);
+
+      if (error) throw error;
+
+      // Terapistin çalışma saatlerini getir (örnek olarak 09:00-17:00 arası)
+      const workingHours = [
+        { start: '09:00', end: '10:00' },
+        { start: '10:00', end: '11:00' },
+        { start: '11:00', end: '12:00' },
+        { start: '13:00', end: '14:00' },
+        { start: '14:00', end: '15:00' },
+        { start: '15:00', end: '16:00' },
+        { start: '16:00', end: '17:00' },
+      ];
+
+      // Müsait olmayan saatleri filtrele
+      return workingHours.filter(slot => {
+        return !appointments.some(appointment => 
+          appointment.start_time === slot.start && appointment.end_time === slot.end
+        );
+      });
+    } catch (error) {
+      console.error('Terapist uygunluğu alınırken hata oluştu:', error);
+      throw error;
+    }
+  }
+};
+
+// Video Oturum API'si
+export const videoSessionApi = {
+  // Video oturumu oluştur
+  async createVideoSession(appointmentId) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Randevuyu kontrol et
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('id, user_id, therapist_id, status, session_type')
+        .eq('id', appointmentId)
+        .single();
+
+      if (appointmentError) throw appointmentError;
+      
+      // Randevunun kullanıcıya veya terapiste ait olduğunu kontrol et
+      if (appointment.user_id !== user.id && appointment.therapist_id !== user.id) {
+        throw new Error('Bu randevu için video oturumu oluşturma yetkiniz yok');
+      }
+
+      // Randevunun durumunu ve tipini kontrol et
+      if (appointment.status !== 'confirmed') {
+        throw new Error('Sadece onaylanmış randevular için video oturumu oluşturulabilir');
+      }
+
+      if (appointment.session_type !== 'online') {
+        throw new Error('Sadece çevrimiçi randevular için video oturumu oluşturulabilir');
+      }
+
+      // Benzersiz bir oda adı oluştur
+      const roomName = `etherea-${appointmentId}-${Date.now()}`;
+
+      // Video oturumu oluştur
+      const { data: videoSession, error } = await supabase
+        .from('video_sessions')
+        .insert({
+          appointment_id: appointmentId,
+          room_name: roomName,
+          created_by: user.id,
+          status: 'created'
+        })
+        .select();
+
+      if (error) throw error;
+
+      // Randevuyu güncelle
+      const { error: updateError } = await supabase
+        .from('appointments')
+        .update({ 
+          session_link: `/video/${roomName}`,
+          session_id: videoSession[0].id
+        })
+        .eq('id', appointmentId);
+
+      if (updateError) throw updateError;
+
+      return videoSession[0];
+    } catch (error) {
+      console.error('Video oturumu oluşturulurken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Video oturumu getir
+  async getVideoSession(roomName) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Video oturumunu getir
+      const { data: videoSession, error } = await supabase
+        .from('video_sessions')
+        .select('*, appointments(*)')
+        .eq('room_name', roomName)
+        .single();
+
+      if (error) throw error;
+
+      // Kullanıcının yetkisini kontrol et
+      const appointment = videoSession.appointments;
+      if (appointment.user_id !== user.id && appointment.therapist_id !== user.id) {
+        throw new Error('Bu video oturumuna erişim yetkiniz yok');
+      }
+
+      return videoSession;
+    } catch (error) {
+      console.error('Video oturumu alınırken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Video oturumu durumunu güncelle
+  async updateVideoSessionStatus(sessionId, status) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Video oturumunu getir
+      const { data: videoSession, error: sessionError } = await supabase
+        .from('video_sessions')
+        .select('*, appointments(*)')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Kullanıcının yetkisini kontrol et
+      const appointment = videoSession.appointments;
+      if (appointment.user_id !== user.id && appointment.therapist_id !== user.id) {
+        throw new Error('Bu video oturumunu güncelleme yetkiniz yok');
+      }
+
+      // Durumu güncelle
+      const { data, error } = await supabase
+        .from('video_sessions')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', sessionId)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Video oturumu durumu güncellenirken hata oluştu:', error);
+      throw error;
+    }
+  },
+
+  // Video oturumu kaydını günlüğe ekle
+  async saveVideoSessionRecording(sessionId, recordingUrl) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Video oturumunu getir
+      const { data: videoSession, error: sessionError } = await supabase
+        .from('video_sessions')
+        .select('*, appointments(*)')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Kullanıcının terapist olduğunu kontrol et
+      if (videoSession.appointments.therapist_id !== user.id) {
+        throw new Error('Sadece terapist video oturumu kaydı ekleyebilir');
+      }
+
+      // Kaydı ekle
+      const { data, error } = await supabase
+        .from('video_sessions')
+        .update({ 
+          recording_url: recordingUrl,
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Video oturumu kaydı eklenirken hata oluştu:', error);
+      throw error;
+    }
+  }
+};
+
+export default supabase; 

@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { AppShell, Burger, Group, NavLink, Title, Box, Button, Text } from '@mantine/core';
+import { AppShell, Burger, Group, NavLink, Title, Box, Button } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconUser, IconCalendar, IconMessage, IconLogout, IconSettings } from '@tabler/icons-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -32,7 +32,7 @@ function TherapistLayout() {
     } catch (error) {
       notifications.show({
         title: 'Hata',
-        message: 'Çıkış yapılamadı',
+        message: `Çıkış yapılamadı: ${error.message}`,
         color: 'red',
       });
     }

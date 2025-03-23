@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { AppShell, Burger, Group, NavLink, Title, Box, Button, Text, Avatar, Menu, Divider, Badge } from '@mantine/core';
+import { AppShell, Burger, Group, NavLink, Title, Box, Button, Avatar, Text, Badge, Divider } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconDashboard,
@@ -9,7 +9,6 @@ import {
   IconSettings,
   IconLogout,
   IconChevronRight,
-  IconBrandSupabase,
 } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { notifications } from '@mantine/notifications';
@@ -41,7 +40,7 @@ export default function AdminLayout() {
     } catch (error) {
       notifications.show({
         title: 'Hata',
-        message: 'Çıkış yapılamadı',
+        message: `Çıkış yapılamadı: ${error.message}`,
         color: 'red',
       });
     }

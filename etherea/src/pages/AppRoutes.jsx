@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Layout from '../components/Layout';
 import PrivateRoute from '../components/PrivateRoute';
 import Home from './Home';
 import JournalEntry from './JournalEntry';
@@ -15,6 +14,8 @@ import TherapistProfile from './therapist/Profile';
 import TherapistMessages from './therapist/Messages';
 import { useAuth } from '../contexts/AuthContext';
 import PersonalAssistantPage from './PersonalAssistantPage';
+import Appointments from './Appointments';
+import VideoSession from './VideoSession';
 
 // Admin sayfaları
 import AdminDashboard from './admin/Dashboard';
@@ -67,11 +68,13 @@ function AppRoutes() {
         <Route path="/messages" element={<Messages />} />
         <Route path="/therapists" element={<TherapistList />} />
         <Route path="/assistant" element={<PersonalAssistantPage />} />
+        <Route path="/appointments" element={<Appointments />} />
+        <Route path="/video/:roomName" element={<VideoSession />} />
 
         {/* Psikolog sayfaları */}
         <Route path="/therapist/profile" element={<TherapistProfile />} />
         <Route path="/therapist/messages" element={<TherapistMessages />} />
-        <Route path="/therapist/appointments" element={<div>Randevularım</div>} />
+        <Route path="/therapist/appointments" element={<Appointments />} />
         <Route path="/therapist/settings" element={<div>Ayarlar</div>} />
         
         {/* Admin sayfaları */}
