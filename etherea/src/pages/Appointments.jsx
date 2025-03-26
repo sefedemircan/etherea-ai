@@ -13,11 +13,14 @@ import {
   Modal,
   Select,
   Textarea,
-  Grid
+  Grid,
+  Table,
+  ActionIcon,
+  TextInput
 } from '@mantine/core';
 import { DatePicker } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
-import { IconCalendarPlus, IconCheck, IconX } from '@tabler/icons-react';
+import { IconCalendarPlus, IconCheck, IconX, IconEye, IconSearch } from '@tabler/icons-react';
 import { appointmentApi } from '../services/supabase';
 import AppointmentCard from '../components/AppointmentCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,9 +28,13 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Appointments() {
   const { userRole } = useAuth();
   const isTherapist = userRole === 'therapist';
+  const isAdmin = userRole === 'admin';
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [opened, { open, close }] = useDisclosure(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [detailsOpened, { open: openDetails, close: closeDetails }] = useDisclosure(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Yeni randevu bilgileri (sadece normal kullanıcılar için)
   const [newAppointment, setNewAppointment] = useState({
@@ -52,7 +59,9 @@ export default function Appointments() {
     setLoading(true);
     try {
       let data;
-      if (isTherapist) {
+      if (isAdmin) {
+        data = await appointmentApi.getAllAppointments();
+      } else if (isTherapist) {
         data = await appointmentApi.getTherapistAppointments();
       } else {
         data = await appointmentApi.getUserAppointments();
@@ -90,6 +99,18 @@ export default function Appointments() {
   const pendingAppointments = appointments.filter(appointment => 
     appointment.status === 'pending'
   ).sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+
+  // Admin için: arama sonuçlarını filtrele
+  const filteredAppointments = appointments.filter(appointment => {
+    if (!searchQuery) return true;
+    
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      (appointment.user_name && appointment.user_name.toLowerCase().includes(searchLower)) ||
+      (appointment.therapist_name && appointment.therapist_name.toLowerCase().includes(searchLower)) ||
+      (appointment.status && appointment.status.toLowerCase().includes(searchLower))
+    );
+  });
 
   async function loadTherapists() {
     setLoadingTherapists(true);
@@ -196,6 +217,37 @@ export default function Appointments() {
       loadAppointments();
     } catch (error) {
       console.error('Randevu durumu güncellenirken hata oluştu:', error);
+    }
+  };
+
+  // Admin için: randevu detaylarını görüntüleme
+  const handleViewDetails = (appointment) => {
+    setSelectedAppointment(appointment);
+    openDetails();
+  };
+
+  const formatDate = (dateString) => {
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString('tr-TR', options);
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'confirmed': return 'Onaylandı';
+      case 'completed': return 'Tamamlandı';
+      case 'cancelled': return 'İptal Edildi';
+      case 'pending': return 'Onay Bekliyor';
+      default: return 'Bilinmiyor';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'confirmed': return 'blue';
+      case 'completed': return 'green';
+      case 'cancelled': return 'red';
+      case 'pending': return 'yellow';
+      default: return 'gray';
     }
   };
 
@@ -430,9 +482,283 @@ export default function Appointments() {
     </>
   );
 
+  // Admin görünümü
+  const renderAdminAppointments = () => (
+    <>
+      <Title order={2} mb="lg">Tüm Randevular</Title>
+
+      <Group position="apart" mb="md">
+        <TextInput
+          placeholder="Hasta veya terapist adı ara..."
+          icon={<IconSearch size={16} />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          style={{ width: 300 }}
+        />
+      </Group>
+
+      {loading ? (
+        <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+          <Loader />
+        </Box>
+      ) : (
+        <Tabs defaultValue="all">
+          <Tabs.List>
+            <Tabs.Tab value="all">Tüm Randevular</Tabs.Tab>
+            <Tabs.Tab value="upcoming">Yaklaşan Randevular</Tabs.Tab>
+            <Tabs.Tab value="pending">Bekleyen Randevular</Tabs.Tab>
+            <Tabs.Tab value="past">Geçmiş Randevular</Tabs.Tab>
+          </Tabs.List>
+
+          <Tabs.Panel value="all" pt="md">
+            {filteredAppointments.length === 0 ? (
+              <Card withBorder p="lg" radius="md">
+                <Text align="center" c="dimmed">Randevu bulunmamaktadır.</Text>
+              </Card>
+            ) : (
+              <Table striped highlightOnHover>
+                <thead>
+                  <tr>
+                    <th>Hasta</th>
+                    <th>Terapist</th>
+                    <th>Tarih & Saat</th>
+                    <th>Durum</th>
+                    <th>Seans Tipi</th>
+                    <th>İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAppointments.map((appointment) => (
+                    <tr key={appointment.id}>
+                      <td>{appointment.user_name || 'Bilinmiyor'}</td>
+                      <td>{appointment.therapist_name || 'Bilinmiyor'}</td>
+                      <td>
+                        {formatDate(appointment.appointment_date)}
+                        <br />
+                        <Text size="xs" color="dimmed">
+                          {appointment.start_time} - {appointment.end_time}
+                        </Text>
+                      </td>
+                      <td>
+                        <Text color={getStatusColor(appointment.status)}>
+                          {getStatusText(appointment.status)}
+                        </Text>
+                      </td>
+                      <td>{appointment.session_type === 'online' ? 'Online' : 'Yüz Yüze'}</td>
+                      <td>
+                        <ActionIcon onClick={() => handleViewDetails(appointment)}>
+                          <IconEye size={16} />
+                        </ActionIcon>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Tabs.Panel>
+
+          <Tabs.Panel value="upcoming" pt="md">
+            {upcomingAppointments.length === 0 ? (
+              <Card withBorder p="lg" radius="md">
+                <Text align="center" c="dimmed">Yaklaşan randevu bulunmamaktadır.</Text>
+              </Card>
+            ) : (
+              <Table striped highlightOnHover>
+                <thead>
+                  <tr>
+                    <th>Hasta</th>
+                    <th>Terapist</th>
+                    <th>Tarih & Saat</th>
+                    <th>Durum</th>
+                    <th>Seans Tipi</th>
+                    <th>İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingAppointments.map((appointment) => (
+                    <tr key={appointment.id}>
+                      <td>{appointment.user_name || 'Bilinmiyor'}</td>
+                      <td>{appointment.therapist_name || 'Bilinmiyor'}</td>
+                      <td>
+                        {formatDate(appointment.appointment_date)}
+                        <br />
+                        <Text size="xs" color="dimmed">
+                          {appointment.start_time} - {appointment.end_time}
+                        </Text>
+                      </td>
+                      <td>
+                        <Text color={getStatusColor(appointment.status)}>
+                          {getStatusText(appointment.status)}
+                        </Text>
+                      </td>
+                      <td>{appointment.session_type === 'online' ? 'Online' : 'Yüz Yüze'}</td>
+                      <td>
+                        <ActionIcon onClick={() => handleViewDetails(appointment)}>
+                          <IconEye size={16} />
+                        </ActionIcon>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Tabs.Panel>
+
+          <Tabs.Panel value="pending" pt="md">
+            {pendingAppointments.length === 0 ? (
+              <Card withBorder p="lg" radius="md">
+                <Text align="center" c="dimmed">Bekleyen randevu bulunmamaktadır.</Text>
+              </Card>
+            ) : (
+              <Table striped highlightOnHover>
+                <thead>
+                  <tr>
+                    <th>Hasta</th>
+                    <th>Terapist</th>
+                    <th>Tarih & Saat</th>
+                    <th>Durum</th>
+                    <th>Seans Tipi</th>
+                    <th>İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingAppointments.map((appointment) => (
+                    <tr key={appointment.id}>
+                      <td>{appointment.user_name || 'Bilinmiyor'}</td>
+                      <td>{appointment.therapist_name || 'Bilinmiyor'}</td>
+                      <td>
+                        {formatDate(appointment.appointment_date)}
+                        <br />
+                        <Text size="xs" color="dimmed">
+                          {appointment.start_time} - {appointment.end_time}
+                        </Text>
+                      </td>
+                      <td>
+                        <Text color={getStatusColor(appointment.status)}>
+                          {getStatusText(appointment.status)}
+                        </Text>
+                      </td>
+                      <td>{appointment.session_type === 'online' ? 'Online' : 'Yüz Yüze'}</td>
+                      <td>
+                        <ActionIcon onClick={() => handleViewDetails(appointment)}>
+                          <IconEye size={16} />
+                        </ActionIcon>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Tabs.Panel>
+
+          <Tabs.Panel value="past" pt="md">
+            {pastAppointments.length === 0 ? (
+              <Card withBorder p="lg" radius="md">
+                <Text align="center" c="dimmed">Geçmiş randevu bulunmamaktadır.</Text>
+              </Card>
+            ) : (
+              <Table striped highlightOnHover>
+                <thead>
+                  <tr>
+                    <th>Hasta</th>
+                    <th>Terapist</th>
+                    <th>Tarih & Saat</th>
+                    <th>Durum</th>
+                    <th>Seans Tipi</th>
+                    <th>İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pastAppointments.map((appointment) => (
+                    <tr key={appointment.id}>
+                      <td>{appointment.user_name || 'Bilinmiyor'}</td>
+                      <td>{appointment.therapist_name || 'Bilinmiyor'}</td>
+                      <td>
+                        {formatDate(appointment.appointment_date)}
+                        <br />
+                        <Text size="xs" color="dimmed">
+                          {appointment.start_time} - {appointment.end_time}
+                        </Text>
+                      </td>
+                      <td>
+                        <Text color={getStatusColor(appointment.status)}>
+                          {getStatusText(appointment.status)}
+                        </Text>
+                      </td>
+                      <td>{appointment.session_type === 'online' ? 'Online' : 'Yüz Yüze'}</td>
+                      <td>
+                        <ActionIcon onClick={() => handleViewDetails(appointment)}>
+                          <IconEye size={16} />
+                        </ActionIcon>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Tabs.Panel>
+        </Tabs>
+      )}
+
+      {/* Randevu Detay Modalı */}
+      <Modal
+        opened={detailsOpened}
+        onClose={closeDetails}
+        title="Randevu Detayları"
+        size="lg"
+      >
+        {selectedAppointment && (
+          <Grid>
+            <Grid.Col span={6}>
+              <Text weight={700} mb={5}>Hasta Bilgileri</Text>
+              <Text mb={15}>{selectedAppointment.user_name || 'Bilinmiyor'}</Text>
+              
+              <Text weight={700} mb={5}>Terapist Bilgileri</Text>
+              <Text mb={15}>{selectedAppointment.therapist_name || 'Bilinmiyor'}</Text>
+              {selectedAppointment.therapist_specialization && (
+                <Text size="sm" color="dimmed" mb={15}>
+                  {Array.isArray(selectedAppointment.therapist_specialization) 
+                    ? selectedAppointment.therapist_specialization.join(', ')
+                    : selectedAppointment.therapist_specialization}
+                </Text>
+              )}
+            </Grid.Col>
+            
+            <Grid.Col span={6}>
+              <Text weight={700} mb={5}>Randevu Tarihi</Text>
+              <Text mb={15}>{formatDate(selectedAppointment.appointment_date)}</Text>
+              
+              <Text weight={700} mb={5}>Saat</Text>
+              <Text mb={15}>{selectedAppointment.start_time} - {selectedAppointment.end_time}</Text>
+              
+              <Text weight={700} mb={5}>Durum</Text>
+              <Text color={getStatusColor(selectedAppointment.status)} mb={15}>
+                {getStatusText(selectedAppointment.status)}
+              </Text>
+              
+              <Text weight={700} mb={5}>Seans Tipi</Text>
+              <Text mb={15}>
+                {selectedAppointment.session_type === 'online' ? 'Online Görüşme' : 'Yüz Yüze Görüşme'}
+              </Text>
+            </Grid.Col>
+            
+            <Grid.Col span={12}>
+              <Text weight={700} mb={5}>Notlar</Text>
+              <Text>{selectedAppointment.notes || 'Not bulunmamaktadır.'}</Text>
+            </Grid.Col>
+          </Grid>
+        )}
+      </Modal>
+    </>
+  );
+
   return (
     <Container size="lg" py="xl">
-      {isTherapist ? renderTherapistAppointments() : renderUserAppointments()}
+      {isAdmin 
+        ? renderAdminAppointments() 
+        : isTherapist 
+          ? renderTherapistAppointments() 
+          : renderUserAppointments()}
     </Container>
   );
 } 

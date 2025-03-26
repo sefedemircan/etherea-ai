@@ -10,6 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+
 // Kimlik doğrulama işlemleri
 export const authApi = {
   async signUp({ email, password, name }) {
@@ -39,7 +40,39 @@ export const authApi = {
         throw new Error('Kullanıcı kaydı başarısız oldu');
       }
 
-      console.log('Kullanıcı başarıyla oluşturuldu:', authData.user.id);
+      // Kullanıcı profili oluştur
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            name: name || email.split('@')[0],
+            created_at: new Date()
+          });
+
+        if (profileError) {
+          console.error('Profil oluşturma hatası:', profileError);
+          // Profil oluşturma hatası kritik değil, devam et
+        }
+
+        // Kullanıcı rolü oluştur
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            id: authData.user.id,
+            role: 'user'
+          });
+
+        if (roleError) {
+          console.error('Rol oluşturma hatası:', roleError);
+          // Rol oluşturma hatası kritik değil, devam et
+        }
+      } catch (error) {
+        console.error('Profil/rol oluşturma hatası:', error);
+        // Bu hatalar kritik değil, kullanıcı kaydı tamamlandı sayılır
+      }
+
+      //console.log('Kullanıcı başarıyla oluşturuldu:', authData.user.id);
       return authData;
     } catch (error) {
       console.error('signUp fonksiyonunda hata:', error);
@@ -155,29 +188,93 @@ export const journalApi = {
     
     if (!user) throw new Error('Kullanıcı oturumu bulunamadı');
     
-    // Profil bilgilerini al
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    
-    if (error) {
-      console.error('Profil bilgileri alınırken hata:', error);
-      // Profil bulunamadıysa temel kullanıcı bilgilerini döndür
+    try {
+      // Önce profil var mı kontrol et (RPCPOSTGRES'te single yerine maybeSingle kullanılmıyor)
+      const { data: profileCheck, error: checkError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id);
+      
+      // Hata yok ama data varsa profil zaten var demektir
+      if (!checkError && profileCheck && profileCheck.length > 0) {
+        return {
+          ...profileCheck[0],
+          email: user.email
+        };
+      }
+      
+      // Profil yok, yeni oluştur
+      // İlk önce varsa silmeyi dene (tutarsızlığı önlemek için)
+      // Hata olsa bile devam et
+      await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id)
+        .then(() => {}, () => {});
+      
+      // Şimdi yeni profil oluştur
+      const newProfile = {
+        id: user.id,
+        name: user.user_metadata?.name || user.email.split('@')[0],
+        avatar_url: user.user_metadata?.avatar_url || null,
+        created_at: new Date().toISOString()
+      };
+      
+      const { data: insertResult, error: insertError } = await supabase
+        .from('profiles')
+        .insert(newProfile)
+        .select();
+      
+      if (insertError) {
+        console.error('Profil oluşturma hatası:', insertError);
+        
+        // Primary key ihlali (zaten var) - profili tekrar almayı dene
+        if (insertError.code === '23505') {
+          const { data: retryProfile, error: retryError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id);
+            
+          if (!retryError && retryProfile && retryProfile.length > 0) {
+            return {
+              ...retryProfile[0],
+              email: user.email
+            };
+          }
+        }
+        
+        // Yine de elde edilemedi, basit profil döndür
+        return {
+          ...newProfile,
+          email: user.email
+        };
+      }
+      
+      // Başarıyla oluşturuldu
+      if (insertResult && insertResult.length > 0) {
+        return {
+          ...insertResult[0],
+          email: user.email
+        };
+      }
+      
+      // Hiçbir şey çalışmadı, basit profil döndür
+      return {
+        ...newProfile,
+        email: user.email
+      };
+    } catch (error) {
+      console.error('Profil işlemi sırasında beklenmeyen hata:', error);
+      
+      // Herhangi bir hata durumunda temel kullanıcı bilgilerini döndür
       return {
         id: user.id,
         email: user.email,
         name: user.user_metadata?.name || user.email.split('@')[0],
         avatar_url: user.user_metadata?.avatar_url || null,
-        created_at: user.created_at
+        created_at: new Date().toISOString()
       };
     }
-    
-    return {
-      ...profile,
-      email: user.email
-    };
   }
 };
 
@@ -362,6 +459,157 @@ export const recommendationsApi = {
 
 // Admin işlemleri
 export const adminApi = {
+  // Veritabanı erişimini test etmek için kullanılır
+  async testDatabaseAccess() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { success: false, error: 'Oturum açmanız gerekiyor' };
+      }
+
+      const results = {
+        user: user.id,
+        email: user.email,
+        tables: {}
+      };
+
+      // Ortak tablolara erişim testi
+      const tables = [
+        'appointments',
+        'profiles',
+        'user_roles',
+        'therapist_profiles',
+        'journal_entries',
+        'recommendations',
+        'video_sessions',
+        'system_settings'
+      ];
+
+      // Her bir tabloyu test et
+      for (const table of tables) {
+        try {
+          const { data, error } = await supabase
+            .from(table)
+            .select('*')
+            .limit(1);
+
+          if (error) {
+            results.tables[table] = { 
+              access: false, 
+              error: error.message,
+              code: error.code 
+            };
+          } else {
+            results.tables[table] = { 
+              access: true, 
+              count: data?.length || 0,
+              sample: data?.length > 0 ? data[0] : null
+            };
+          }
+        } catch (err) {
+          results.tables[table] = { 
+            access: false, 
+            error: err.message || 'Bilinmeyen hata' 
+          };
+        }
+      }
+
+      return results;
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Admin için tüm randevuları doğrudan getir (performans için)
+  async getAppointmentsDirectAccess() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum açmanız gerekiyor');
+
+      // Kullanıcının admin olup olmadığını kontrol et
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (roleError) throw roleError;
+      if (userRole.role !== 'admin') throw new Error('Bu işlem için admin olmanız gerekiyor');
+
+      // Join kullanarak randevuları ilişkili profil bilgileriyle almak için RPC kullanıyoruz
+      const { data: appointments, error } = await supabase.rpc('get_appointments_with_names');
+
+      if (error) {
+        console.error('Randevular ilişkisel olarak alınamadı:', error);
+        
+        // Hata durumunda geri dönüşüm yöntemi olarak tek tek alıp ilişkilendirelim
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('appointments')
+          .select('*')
+          .order('appointment_date', { ascending: true });
+          
+        if (fallbackError) throw fallbackError;
+        
+        if (!fallbackData || fallbackData.length === 0) {
+          return [];
+        }
+        
+        // Terapist ve kullanıcı bilgilerini getir
+        const therapistIds = [...new Set(fallbackData.map(a => a.therapist_id).filter(Boolean))];
+        const userIds = [...new Set(fallbackData.map(a => a.user_id).filter(Boolean))];
+        
+        let therapists = [];
+        let profiles = [];
+        
+        // Terapist bilgilerini al
+        if (therapistIds.length > 0) {
+          const { data: therapistData } = await supabase
+            .from('therapist_profiles')
+            .select('id, full_name, specializations')
+            .in('id', therapistIds);
+            
+          therapists = therapistData || [];
+        }
+        
+        // Kullanıcı bilgilerini al
+        if (userIds.length > 0) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url')
+            .in('id', userIds);
+            
+          profiles = profileData || [];
+        }
+        
+        // Verileri birleştir
+        return fallbackData.map(appointment => {
+          const therapist = therapists.find(t => t.id === appointment.therapist_id) || {};
+          const profile = profiles.find(p => p.id === appointment.user_id) || {};
+          
+          return {
+            ...appointment,
+            therapist_name: therapist.full_name || 'İsimsiz Terapist',
+            therapist_specialization: therapist.specializations || [],
+            user_name: profile.name || 'İsimsiz Kullanıcı',
+            user_avatar: profile.avatar_url || null
+          };
+        });
+      }
+      
+      // Join ile veriler başarıyla alındı
+      return appointments.map(appointment => ({
+        ...appointment,
+        therapist_name: appointment.therapist_name || 'İsimsiz Terapist',
+        therapist_specialization: appointment.therapist_specialization || [],
+        user_name: appointment.user_name || 'İsimsiz Kullanıcı',
+        user_avatar: appointment.user_avatar || null
+      }));
+    } catch (error) {
+      console.error('Randevular alınırken hata:', error);
+      throw error;
+    }
+  },
+
   async getAllTherapists(status = 'all') {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -521,6 +769,71 @@ export const adminApi = {
       
     if (profilesError) throw profilesError;
     
+    // Eğer profil tablosunda kayıtlar eksikse, profilleri oluşturalım
+    const missingUserIds = userRoles
+      .filter(userRole => !profiles.some(profile => profile.id === userRole.id))
+      .map(userRole => userRole.id);
+      
+    //console.log(`Eksik profil sayısı: ${missingUserIds.length}`);
+    
+    if (missingUserIds.length > 0) {
+      // Profil tablosuna eksik profilleri ekle
+      try {
+        // RPC fonksiyonu kullanarak profilleri oluştur
+        const { data: createdProfiles, error: createError } = await supabase.rpc(
+          'create_missing_profiles', 
+          { missing_user_ids: missingUserIds }
+        );
+        
+        if (createError) {
+          console.error('RPC ile profil oluşturma hatası:', createError);
+          
+          // Alternatif yöntem: Tek tek güvenlik tanımlayıcı fonksiyon ile profilleri oluştur
+          for (const userId of missingUserIds) {
+            const matchedUserRole = userRoles.find(ur => ur.id === userId);
+            const profileName = matchedUserRole?.role === 'user' ? 'Kullanıcı' : 
+                        matchedUserRole?.role === 'therapist' ? 'Terapist' : 
+                        matchedUserRole?.role === 'admin' ? 'Yönetici' : 'Kullanıcı';
+                       
+            // Güvenlik tanımlayıcı olan fonksiyonu çağır
+            const { error: singleError } = await supabase.rpc(
+              'create_single_profile',
+              { 
+                p_user_id: userId,
+                p_name: profileName
+              }
+            );
+            
+            if (singleError) {
+              console.error(`Profil oluşturma hatası (${userId}):`, singleError);
+            } else {
+              console.log(`Profil başarıyla oluşturuldu: ${userId}`);
+              
+              // Profiller dizisine yeni oluşturulan profili ekle
+              profiles.push({
+                id: userId,
+                name: profileName
+              });
+            }
+          }
+        } else if (createdProfiles) {
+          console.log(`${createdProfiles.length} yeni profil oluşturuldu`);
+          
+          // Yeni oluşturulan profilleri tekrar çek
+          const { data: updatedProfiles } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .in('id', missingUserIds);
+            
+          if (updatedProfiles && updatedProfiles.length > 0) {
+            profiles.push(...updatedProfiles);
+          }
+        }
+      } catch (error) {
+        console.error('Profil oluşturma sırasında hata:', error);
+      }
+    }
+    
     // Verileri birleştir
     const users = userRoles.map(userRole => {
       const profile = profiles.find(p => p.id === userRole.id) || {};
@@ -541,60 +854,151 @@ export const adminApi = {
     return users;
   },
   
+  // Admin için tüm randevuları getir
   async getAllAppointments() {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Kullanıcının admin olup olmadığını kontrol et
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    
-    if (roleError) throw roleError;
-    if (userRole.role !== 'admin') throw new Error('Bu işlem için yetkiniz bulunmamaktadır');
-    
-    // Tüm randevuları getir
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select('*')
-      .order('appointment_date', { ascending: false });
-    
-    if (appointmentsError) throw appointmentsError;
-    
-    // Kullanıcı ve psikolog bilgilerini ayrı ayrı getir
-    const userIds = appointments.map(a => a.user_id);
-    const therapistIds = appointments.map(a => a.therapist_id);
-    
-    // Kullanıcı profillerini getir
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, name')
-      .in('id', userIds);
+    try {
+      //console.log('[DEBUG] Tüm randevuları getirme işlemi başlatılıyor...');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Oturum açmanız gerekiyor');
+      }
+      //console.log('[DEBUG] Kullanıcı oturumu doğrulandı:', user.id);
+
+      // Kullanıcının admin olup olmadığını kontrol et
+      //console.log('[DEBUG] Kullanıcı rolü kontrol ediliyor...');
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
       
-    if (profilesError) throw profilesError;
-    
-    // Psikolog profillerini getir
-    const { data: therapists, error: therapistsError } = await supabase
-      .from('therapist_profiles')
-      .select('id, full_name')
-      .in('id', therapistIds);
+      if (roleError) {
+        //console.log('[DEBUG] Rol hatası:', roleError);
+        throw new Error(`Kullanıcı rolü alınamadı: ${roleError.message}`);
+      }
       
-    if (therapistsError) throw therapistsError;
-    
-    // Verileri birleştir
-    const result = appointments.map(appointment => {
-      const userProfile = profiles.find(p => p.id === appointment.user_id) || {};
-      const therapistProfile = therapists.find(t => t.id === appointment.therapist_id) || {};
+      //console.log('[DEBUG] Kullanıcı rolü:', userRole?.role);
+      if (userRole?.role !== 'admin') {
+        throw new Error('Bu işlem için admin olmanız gerekiyor');
+      }
+
+      // Doğrudan sorguyu gönderelim
+      //console.log('[DEBUG] SQL Sorgusu: SELECT * FROM appointments');
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('appointment_date', { ascending: true });
+
+      if (error) {
+        //console.log('[DEBUG] SQL Sorgu hatası:', error);
+        throw new Error(`Randevular alınamadı: ${error.message}`);
+      }
       
-      return {
-        ...appointment,
-        user_name: userProfile.name || 'İsimsiz Kullanıcı',
-        therapist_name: therapistProfile.full_name || 'İsimsiz Psikolog'
-      };
-    });
-    
-    return result;
+      //console.log('[DEBUG] SQL Sorgu sonucu:', appointments);
+      //console.log(`[DEBUG] Toplam ${appointments?.length || 0} randevu bulundu`);
+      
+      // Boş liste durumunda erken dön
+      if (!appointments || appointments.length === 0) {
+        //console.log('[DEBUG] Hiç randevu bulunamadı, boş liste dönüyor');
+        return [];
+      }
+
+      // Terapist ve kullanıcı bilgilerini getir
+      const therapistIds = [...new Set(appointments.map(a => a.therapist_id).filter(Boolean))];
+      const userIds = [...new Set(appointments.map(a => a.user_id).filter(Boolean))];
+      
+      //console.log(`[DEBUG] ${therapistIds.length} terapist, ${userIds.length} kullanıcı`);
+      //console.log('[DEBUG] Terapist ID\'leri:', therapistIds);
+      //console.log('[DEBUG] Kullanıcı ID\'leri:', userIds);
+      
+      let therapists = [];
+      let profiles = [];
+      
+      if (therapistIds.length > 0) {
+        try {
+          //console.log('[DEBUG] Terapist profilleri getiriliyor...');
+          const { data, error: therapistsError } = await supabase
+            .from('therapist_profiles')
+            .select('id, full_name, specializations')
+            .in('id', therapistIds);
+  
+          if (!therapistsError && data) {
+            therapists = data;
+            //console.log(`[DEBUG] ${therapists.length} terapist profili bulundu:`, therapists);
+          } else {
+            //console.log('[DEBUG] Terapist profilleri hata:', therapistsError);
+          }
+        } catch {
+          // Terapist bilgileri alınamadı, devam ediyoruz
+        }
+      }
+      
+      if (userIds.length > 0) {
+        try {
+          //console.log('[DEBUG] Kullanıcı profilleri getiriliyor...');
+          const { data, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url')
+            .in('id', userIds);
+  
+          if (!profilesError && data) {
+            profiles = data;
+            //console.log(`[DEBUG] ${profiles.length} kullanıcı profili bulundu:`, profiles);
+            
+            // Eksik profil varsa otomatik oluştur
+            const missingUserIds = userIds.filter(userId => !profiles.some(profile => profile.id === userId));
+            
+            if (missingUserIds.length > 0) {
+              console.log(`Eksik ${missingUserIds.length} kullanıcı profili için bilgi alınıyor...`);
+              
+              // Auth servisinden kullanıcı e-postası almaya çalış
+              for (const userId of missingUserIds) {
+                // Kullanıcı rollerinden bilgiyi alma
+                const { data: roleData } = await supabase
+                  .from('user_roles')
+                  .select('role')
+                  .eq('id', userId)
+                  .single();
+                
+                // Temel kullanıcı bilgilerini ekle
+                profiles.push({
+                  id: userId,
+                  name: roleData?.role === 'user' ? 'Kullanıcı' : 
+                        roleData?.role === 'therapist' ? 'Terapist' : 
+                        roleData?.role === 'admin' ? 'Yönetici' : 'Kullanıcı',
+                  avatar_url: null
+                });
+              }
+            }
+          } else {
+            //console.log('[DEBUG] Kullanıcı profilleri hata:', profilesError);
+          }
+        } catch {
+          // Kullanıcı bilgileri alınamadı, devam ediyoruz
+        }
+      }
+
+      // Verileri birleştir
+      //console.log('[DEBUG] Veriler birleştiriliyor...');
+      const result = appointments.map(appointment => {
+        const therapist = therapists.find(t => t.id === appointment.therapist_id) || {};
+        const profile = profiles.find(p => p.id === appointment.user_id) || {};
+        
+        return {
+          ...appointment,
+          therapist_name: therapist.full_name || (appointment.therapist_id ? `Terapist (${appointment.therapist_id.substring(0, 6)})` : 'İsimsiz Terapist'),
+          therapist_specialization: therapist.specializations || [],
+          user_name: profile.name || (appointment.user_id ? `Kullanıcı (${appointment.user_id.substring(0, 6)})` : 'İsimsiz Kullanıcı'),
+          user_avatar: profile.avatar_url || null
+        };
+      });
+      
+      //console.log('[DEBUG] Birleştirme sonucu:', result);
+      return result;
+    } catch (error) {
+      console.error('Tüm randevular alınırken hata oluştu:', error);
+      throw error;
+    }
   },
   
   async updateAppointmentStatus(appointmentId, status) {
@@ -750,34 +1154,90 @@ export const appointmentApi = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Oturum açmanız gerekiyor');
 
-      // Kullanıcının randevularını getir
-      const { data: appointments, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('appointment_date', { ascending: true });
-
-      if (error) throw error;
-
-      // Terapist bilgilerini getir
-      const therapistIds = [...new Set(appointments.map(a => a.therapist_id))];
-      
-      const { data: therapists, error: therapistsError } = await supabase
-        .from('therapist_profiles')
-        .select('id, full_name, specializations')
-        .in('id', therapistIds);
-
-      if (therapistsError) throw therapistsError;
-
-      // Verileri birleştir
-      return appointments.map(appointment => {
-        const therapist = therapists.find(t => t.id === appointment.therapist_id) || {};
-        return {
-          ...appointment,
-          therapist_name: therapist.full_name || 'İsimsiz Terapist',
-          therapist_specialization: therapist.specializations
-        };
+      // Kulanıcının randevuları için RPC kullanarak tek sorguda tüm bilgileri alalım
+      const { data: appointments, error } = await supabase.rpc('get_user_appointments', {
+        p_user_id: user.id
       });
+
+      // RPC fonksiyonu yoksa veya hata alındıysa klasik yöntemi kullan
+      if (error || !appointments) {
+        // Klasik yöntem: Önce randevuları getir, sonra terapist bilgilerini al
+        const { data: fallbackAppointments, error: fallbackError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('appointment_date', { ascending: true });
+
+        if (fallbackError) throw fallbackError;
+        
+        // Boş liste durumunda erken dön
+        if (!fallbackAppointments || fallbackAppointments.length === 0) {
+          return [];
+        }
+
+        // Terapist bilgilerini getir
+        const therapistIds = [...new Set(fallbackAppointments.map(a => a.therapist_id).filter(Boolean))];
+        
+        let therapists = [];
+        
+        if (therapistIds.length > 0) {
+          try {
+            const { data, error: therapistsError } = await supabase
+              .from('therapist_profiles')
+              .select('id, full_name, specializations')
+              .in('id', therapistIds);
+    
+            if (!therapistsError && data) {
+              therapists = data;
+              
+              // Eksik terapist profili var mı kontrol et
+              const missingTherapistIds = therapistIds.filter(id => !therapists.some(t => t.id === id));
+              
+              if (missingTherapistIds.length > 0) {
+                console.log(`Eksik ${missingTherapistIds.length} terapist profili için bilgi alınıyor...`);
+                
+                // Eksik terapistler için rol bilgilerini ekle
+                for (const therapistId of missingTherapistIds) {
+                  // Rol bilgisini kontrol et, terapist olduğundan eminiz
+                  const { data: roleData } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('id', therapistId)
+                    .single();
+                  
+                  // Terapist için temel bilgileri ekle
+                  therapists.push({
+                    id: therapistId,
+                    full_name: roleData?.role === 'therapist' ? 'Terapist' : 'Kullanıcı',
+                    specializations: []
+                  });
+                }
+              }
+            } else {
+              console.error('Terapist bilgileri alınırken hata:', therapistsError);
+            }
+          } catch (error) {
+            console.error('Terapist bilgileri alınırken beklenmeyen hata:', error);
+          }
+        }
+
+        // Verileri birleştir
+        return fallbackAppointments.map(appointment => {
+          const therapist = therapists.find(t => t.id === appointment.therapist_id) || {};
+          return {
+            ...appointment,
+            therapist_name: therapist.full_name || (appointment.therapist_id ? `Terapist (${appointment.therapist_id.substring(0, 6)})` : 'İsimsiz Terapist'),
+            therapist_specialization: therapist.specializations || []
+          };
+        });
+      }
+
+      // RPC başarılı olduysa doğrudan gelen veriyi kullan
+      return appointments.map(appointment => ({
+        ...appointment,
+        therapist_name: appointment.therapist_name || 'İsimsiz Terapist',
+        therapist_specialization: appointment.therapist_specialization || []
+      }));
     } catch (error) {
       console.error('Randevular alınırken hata oluştu:', error);
       throw error;
@@ -817,34 +1277,94 @@ export const appointmentApi = {
       if (roleError) throw roleError;
       if (userRole.role !== 'therapist') throw new Error('Bu işlem için terapist olmanız gerekiyor');
 
-      // Terapistin randevularını getir
-      const { data: appointments, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('therapist_id', user.id)
-        .order('appointment_date', { ascending: true });
-
-      if (error) throw error;
-
-      // Kullanıcı bilgilerini getir
-      const userIds = [...new Set(appointments.map(a => a.user_id))];
-      
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url')
-        .in('id', userIds);
-
-      if (profilesError) throw profilesError;
-
-      // Verileri birleştir
-      return appointments.map(appointment => {
-        const profile = profiles.find(p => p.id === appointment.user_id) || {};
-        return {
-          ...appointment,
-          user_name: profile.name || 'İsimsiz Kullanıcı',
-          user_avatar: profile.avatar_url
-        };
+      // RPC kullanarak terapistin randevularını ve ilişkili kullanıcı bilgilerini getir
+      const { data: appointments, error } = await supabase.rpc('get_therapist_appointments', {
+        p_therapist_id: user.id
       });
+
+      // RPC fonksiyonu yoksa veya hata alındıysa klasik yönteme geri dön
+      if (error || !appointments) {
+        console.log('RPC hatası, klasik yönteme dönülüyor:', error);
+        
+        // Klasik yöntem: Önce randevuları getir, sonra kullanıcı bilgilerini al
+        const { data: fallbackAppointments, error: fallbackError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('therapist_id', user.id)
+          .order('appointment_date', { ascending: true });
+
+        if (fallbackError) throw fallbackError;
+        
+        // Boş liste durumunda erken dön
+        if (!fallbackAppointments || fallbackAppointments.length === 0) {
+          return [];
+        }
+
+        // Kullanıcı bilgilerini getir
+        const userIds = [...new Set(fallbackAppointments.map(a => a.user_id).filter(Boolean))];
+        
+        let profiles = [];
+        
+        if (userIds.length > 0) {
+          try {
+            const { data, error: profilesError } = await supabase
+              .from('profiles')
+              .select('id, name, avatar_url')
+              .in('id', userIds);
+    
+            if (!profilesError && data) {
+              profiles = data;
+              
+              // Eksik profil varsa otomatik oluştur
+              const missingUserIds = userIds.filter(userId => !profiles.some(profile => profile.id === userId));
+              
+              if (missingUserIds.length > 0) {
+                console.log(`Eksik ${missingUserIds.length} kullanıcı profili için bilgi alınıyor...`);
+                
+                // Eksik profiller için rol bilgisi alıp yedek isim atayalım
+                for (const userId of missingUserIds) {
+                  // Kullanıcı rollerinden bilgiyi alma
+                  const { data: roleData } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('id', userId)
+                    .single();
+                  
+                  // Temel kullanıcı bilgilerini ekle
+                  profiles.push({
+                    id: userId,
+                    name: roleData?.role === 'user' ? 'Kullanıcı' : 
+                          roleData?.role === 'therapist' ? 'Terapist' : 
+                          roleData?.role === 'admin' ? 'Yönetici' : 'Kullanıcı',
+                    avatar_url: null
+                  });
+                }
+              }
+            } else {
+              console.error('Kullanıcı profilleri alınırken hata:', profilesError);
+            }
+          } catch (error) {
+            console.error('Kullanıcı profilleri alınırken beklenmeyen hata:', error);
+          }
+        }
+
+        // Verileri birleştir
+        return fallbackAppointments.map(appointment => {
+          const profile = profiles.find(p => p.id === appointment.user_id) || {};
+          return {
+            ...appointment,
+            user_name: profile.name || (appointment.user_id ? `Kullanıcı (${appointment.user_id.substring(0, 6)})` : 'İsimsiz Kullanıcı'),
+            user_avatar: profile.avatar_url || null
+          };
+        });
+      }
+
+      // RPC başarılı olduysa doğrudan gelen veriyi kullan
+      return appointments.map(appointment => ({
+        ...appointment,
+        user_name: appointment.user_name || 'İsimsiz Kullanıcı',
+        user_avatar: appointment.user_avatar || null
+      }));
     } catch (error) {
       console.error('Terapist randevuları alınırken hata oluştu:', error);
       throw error;
