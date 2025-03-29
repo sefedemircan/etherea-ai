@@ -373,4 +373,58 @@ insert into system_settings (key, value)
 values 
   ('general', '{"allowNewRegistrations": true, "allowTherapistRegistrations": true, "maintenanceMode": false, "sessionFeePercentage": 10}'::jsonb),
   ('email', '{"sendWelcomeEmails": true, "sendAppointmentReminders": true, "reminderHoursBeforeAppointment": 24, "adminEmail": "admin@etherea.com"}'::jsonb)
-on conflict (key) do nothing; 
+on conflict (key) do nothing;
+
+-- Ödemeler tablosu
+create table if not exists payments (
+  id uuid default uuid_generate_v4() primary key,
+  appointment_id uuid references appointments(id) on delete set null,
+  user_id uuid references auth.users(id) on delete set null,
+  therapist_id uuid references therapist_profiles(id) on delete set null,
+  amount decimal(10,2) not null,
+  currency text not null default 'TRY',
+  status text check (status in ('pending', 'completed', 'failed', 'refunded')) default 'pending',
+  payment_method text check (payment_method in ('credit_card', 'bank_transfer', 'paypal', 'stripe')),
+  payment_intent_id text,
+  payment_date timestamp with time zone,
+  receipt_url text,
+  commission_amount decimal(10,2),
+  commission_rate decimal(5,2),
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- RLS politikası
+alter table payments enable row level security;
+
+create policy "Kullanıcılar kendi ödemelerini görebilir"
+  on payments for select
+  using ( auth.uid() = user_id );
+
+create policy "Terapistler kendi ödemelerini görebilir"
+  on payments for select
+  using ( auth.uid() = therapist_id );
+
+create policy "Adminler tüm ödemeleri yönetebilir"
+  on payments for all
+  using ( auth.uid() in (
+    select id from user_roles where role = 'admin'
+  ));
+
+-- Ödemeleri silme ve güncelleme politikaları
+create policy "Sadece adminler ödemeleri silebilir"
+  on payments for delete
+  using ( auth.uid() in (
+    select id from user_roles where role = 'admin'
+  ));
+
+create policy "Sadece adminler ödemeleri güncelleyebilir"
+  on payments for update
+  using ( auth.uid() in (
+    select id from user_roles where role = 'admin'
+  ));
+
+-- Kullanıcılar kendi ödemelerini oluşturabilir
+create policy "Kullanıcılar ödeme oluşturabilir"
+  on payments for insert
+  with check ( auth.uid() = user_id ); 

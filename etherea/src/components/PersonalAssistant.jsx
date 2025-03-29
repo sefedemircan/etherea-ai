@@ -20,13 +20,15 @@ import {
   IconSend, 
   IconBulb, 
   IconHeartHandshake, 
-  IconMessage, 
   IconChartLine 
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { aiApi } from '../services/openai';
 import { journalApi } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+
+// Asistanın önbellek süresi (milisaniye cinsinden, 30 dakika)
+const ASSISTANT_CACHE_DURATION = 30 * 60 * 1000;
 
 function PersonalAssistant() {
   const { user } = useAuth();
@@ -38,8 +40,46 @@ function PersonalAssistant() {
   const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
-    loadUserData();
+    // Önbellekten asistan verilerini yükleme
+    const loadCachedAssistant = () => {
+      try {
+        const cachedData = localStorage.getItem('etherea_assistant');
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          const now = new Date().getTime();
+          // Önbellek süresi dolmadıysa, önbellekten yükle
+          if (now - timestamp < ASSISTANT_CACHE_DURATION) {
+            setAssistant(data.assistant);
+            setUserData(data.userData);
+            setLoading(false);
+            return true; // Önbellekten yüklendi
+          }
+        }
+        return false; // Önbellekten yüklenmedi
+      } catch (error) {
+        console.error('Önbellek okuma hatası:', error);
+        return false;
+      }
+    };
+
+    // Önbellekte geçerli veri yoksa yeni veri yükle
+    if (!loadCachedAssistant()) {
+      loadUserData();
+    }
   }, [user]);
+
+  // Asistan verilerini önbelleğe kaydetme
+  const cacheAssistantData = (userData, assistant) => {
+    try {
+      const cacheData = {
+        data: { userData, assistant },
+        timestamp: new Date().getTime()
+      };
+      localStorage.setItem('etherea_assistant', JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('Önbellek yazma hatası:', error);
+    }
+  };
 
   const loadUserData = async () => {
     setLoading(true);
@@ -69,7 +109,11 @@ function PersonalAssistant() {
       setUserData(userData);
       
       // Kişiselleştirilmiş asistanı oluştur
-      await createAssistant(userData);
+      const assistantResponse = await aiApi.createPersonalizedAssistant(userData);
+      setAssistant(assistantResponse);
+      
+      // Asistan verilerini önbelleğe kaydet
+      cacheAssistantData(userData, assistantResponse);
     } catch (error) {
       console.error('Kullanıcı verileri yüklenirken hata:', error);
       notifications.show({
@@ -133,23 +177,12 @@ function PersonalAssistant() {
       .map(([keyword]) => keyword);
   };
 
-  const createAssistant = async (userData) => {
-    try {
-      const assistantResponse = await aiApi.createPersonalizedAssistant(userData);
-      setAssistant(assistantResponse);
-    } catch (error) {
-      console.error('Asistan oluşturulurken hata:', error);
-      notifications.show({
-        title: 'Hata',
-        message: 'Kişisel asistan oluşturulamadı',
-        color: 'red',
-      });
-    }
-  };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
+      // Önbelleği temizle
+      localStorage.removeItem('etherea_assistant');
+      
       await loadUserData();
       notifications.show({
         title: 'Başarılı',
@@ -179,6 +212,9 @@ function PersonalAssistant() {
       const assistantResponse = await aiApi.createPersonalizedAssistant(updatedUserData);
       setAssistant(assistantResponse);
       setUserMessage('');
+      
+      // Asistan verilerini önbelleğe kaydet
+      cacheAssistantData(updatedUserData, assistantResponse);
       
       notifications.show({
         title: 'Başarılı',
