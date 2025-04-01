@@ -17,6 +17,9 @@ function Messages() {
   useEffect(() => {
     loadTherapists();
     
+    // Terapi ID'si için ref değişkeni
+    const currentTherapistId = selectedTherapist?.id;
+    
     // Gerçek zamanlı mesaj güncellemeleri için subscription
     const subscription = supabase
       .channel('messages')
@@ -27,6 +30,36 @@ function Messages() {
         filter: `receiver_id=eq.${user.id}`,
       }, payload => {
         handleNewMessage(payload.new);
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${user.id}`,
+      }, payload => {
+        // Mesaj güncellemesi (örn. okundu işaretlenmesi)
+        console.log('Mesaj güncellendi:', payload.new);
+        
+        // Mesaj listesini güncelle
+        if (currentTherapistId && payload.new.sender_id === currentTherapistId) {
+          setMessages(prev => 
+            prev.map(m => 
+              m.id === payload.new.id ? {...m, ...payload.new} : m
+            )
+          );
+        }
+        
+        // Okundu durumu değiştiyse terapi listesini güncelle
+        if (payload.new.is_read === 'TRUE' && payload.old.is_read !== 'TRUE') {
+          // Terapi listesinden okunmamış mesaj sayısını azalt
+          setTherapists(prev =>
+            prev.map(t =>
+              t.id === payload.new.sender_id
+                ? {...t, unreadCount: Math.max(0, (t.unreadCount || 0) - 1)}
+                : t
+            )
+          );
+        }
       })
       .subscribe();
 
@@ -39,8 +72,77 @@ function Messages() {
   useEffect(() => {
     if (selectedTherapist) {
       loadMessages(selectedTherapist.id);
+      // Seçilen terapistle ilgili okunmamış mesajları güncelle
+      markMessagesAsRead(selectedTherapist.id);
+      // Terapi listesindeki okunmamış mesaj sayacını sıfırla
+      setTherapists(prevTherapists => 
+        prevTherapists.map(t => 
+          t.id === selectedTherapist.id 
+            ? {...t, unreadCount: 0} 
+            : t
+        )
+      );
     }
   }, [selectedTherapist]);
+
+  // Okunmamış mesajları okundu olarak işaretle
+  const markMessagesAsRead = async (therapistId) => {
+    try {
+      console.log(`${therapistId} ID'li kullanıcıdan gelen mesajlar okundu olarak işaretleniyor...`);
+      
+      // Önce okunmamış mesajları bulalım
+      const { data: unreadMessages, error: checkError } = await supabase
+        .from('messages')
+        .select('id, is_read')
+        .eq('receiver_id', user.id)
+        .eq('sender_id', therapistId)
+        .or('is_read.is.null,is_read.neq.TRUE');
+      
+      if (checkError) {
+        console.error('Okunmamış mesajlar kontrol edilirken hata:', checkError);
+        return;
+      }
+      
+      console.log('Okunmamış mesajlar:', unreadMessages);
+
+      if (!unreadMessages || unreadMessages.length === 0) {
+        console.log('Okunmamış mesaj bulunamadı');
+        return;
+      }
+
+      // Veritabanı sorgusu - veritabanında bu değer string olarak saklanıyor
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ is_read: 'TRUE' })  // 'TRUE' olarak ayarla
+        .eq('receiver_id', user.id)
+        .eq('sender_id', therapistId)
+        .or('is_read.is.null,is_read.neq.TRUE')
+        .select();
+      
+      if (error) {
+        console.error('Mesajlar okundu olarak işaretlenirken hata:', error);
+        notifications.show({
+          title: 'Hata',
+          message: 'Mesajlar okundu olarak işaretlenemedi',
+          color: 'red'
+        });
+      } else {
+        // Güncellenen mesajların ID'lerini görüntüle
+        console.log(`${data.length} mesaj okundu olarak işaretlendi:`, data.map(m => m.id));
+        
+        // Ayrıca istediğimiz kişiden gelen tüm mesajları UI'da da okundu olarak işaretle
+        setMessages(prev => 
+          prev.map(m => 
+            m.sender_id === therapistId && m.receiver_id === user.id 
+              ? {...m, is_read: 'TRUE'} 
+              : m
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Mesajlar okundu olarak işaretlenirken hata:', error);
+    }
+  };
 
   const loadTherapists = async () => {
     try {
@@ -141,6 +243,9 @@ function Messages() {
           }
         }
 
+        // is_read kontrolü - hem string hem boolean kontrol et
+        const isRead = message.is_read === true || message.is_read === 'TRUE';
+
         const existingConv = conversationMap.get(otherId);
         if (!existingConv) {
           conversationMap.set(otherId, {
@@ -150,11 +255,11 @@ function Messages() {
             avatar_url,
             lastMessage: message.content || '',
             lastMessageDate: message.created_at,
-            unreadCount: (!isUserSender && !message.is_read) ? 1 : 0
+            unreadCount: (!isUserSender && !isRead) ? 1 : 0
           });
         } else {
           // Okunmamış mesaj sayısını güncelle
-          if (!isUserSender && !message.is_read) {
+          if (!isUserSender && !isRead) {
             existingConv.unreadCount = (existingConv.unreadCount || 0) + 1;
           }
           // Son mesajı güncelle
@@ -199,6 +304,7 @@ function Messages() {
           receiver_id,
           content,
           created_at,
+          is_read,
           sender:profiles!sender_id(
             id,
             name,
@@ -259,13 +365,6 @@ function Messages() {
       }).filter(Boolean);
 
       setMessages(enrichedMessages);
-
-      // Okunmamış mesajları okundu olarak işaretle
-      await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('receiver_id', user.id)
-        .eq('sender_id', userId);
     } catch (error) {
       console.error('Mesajlar yüklenirken hata:', error);
       notifications.show({
@@ -280,6 +379,11 @@ function Messages() {
     // Yeni mesaj mevcut konuşmaya aitse ekle
     if (selectedTherapist && (message.sender_id === selectedTherapist.id || message.receiver_id === selectedTherapist.id)) {
       setMessages(prev => [...prev, message]);
+      
+      // Eğer mesaj seçili terapistten geliyorsa, hemen okundu olarak işaretle
+      if (message.sender_id === selectedTherapist.id) {
+        markMessagesAsRead(selectedTherapist.id);
+      }
     }
     
     // Psikolog listesini güncelle
@@ -295,7 +399,8 @@ function Messages() {
         .insert({
           sender_id: user.id,
           receiver_id: selectedTherapist.id,
-          content: newMessage.trim()
+          content: newMessage.trim(),
+          is_read: 'FALSE'  // Yeni mesajlar okunmamış olarak işaretlenir
         })
         .select()
         .single();
